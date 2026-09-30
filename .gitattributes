@@ -1,0 +1,10 @@
+# По умолчанию текст с LF, CRLF — на диске (Windows-рабочий копии).
+# Иначе каждый файл в диффе выглядит изменённым целиком.
+* text=auto eol=crlf
+
+# Бинарное не трогаем: иконки приложения, базы, exe.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.exe binary

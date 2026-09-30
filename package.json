@@ -1,0 +1,66 @@
+{
+  "name": "dotacustoms",
+  "version": "1.0.0",
+  "description": "DotaCustoms — хаб кастомных игр Dota 2: Custom Hero Chaos и Ratten Run. Билды, топы, ветви-баги/фичи, роли Coach и Admin.",
+  "author": "DotaCustoms",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:web": "node scripts/dev-web.js",
+    "server": "node backend/server.js",
+    "data:fetch": "node scripts/fetch-dota-data.js",
+    "data:build": "node scripts/build-dataset.js",
+    "data:custom": "node scripts/build-custom-items.js",
+    "data:images": "node scripts/fetch-images.js && node scripts/fetch-custom-images.js",
+    "data:images:custom": "node scripts/fetch-custom-images.js",
+    "icon": "node scripts/make-icon.js",
+    "data:seed": "node scripts/seed-guides.js",
+    "db:reset": "node scripts/reset-db.js",
+    "test": "node scripts/test.js && node scripts/test-session.js && node scripts/check-renderer.js && node scripts/test-ui.js",
+    "test:api": "node scripts/test.js",
+    "test:session": "node scripts/test-session.js",
+    "test:ui": "node scripts/test-ui.js",
+    "test:dist": "node scripts/test-dist.js",
+    "check:renderer": "node scripts/check-renderer.js",
+    "check:window": "node scripts/check-window.js",
+    "lint": "node scripts/lint.js",
+    "dist": "electron-builder --win portable",
+    "postinstall": "electron-builder install-app-deps",
+    "test:save": "node scripts/test-save.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "node-sqlite3-wasm": "^0.8.60"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.dotacustoms.hub",
+    "productName": "DotaCustoms",
+    "files": [
+      "app/**",
+      "backend/**",
+      "build/icon.png",
+      "data/**",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-sqlite3-wasm/dist/**"
+    ],
+    "compression": "maximum",
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

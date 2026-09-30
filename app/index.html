@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <!--
+    Всё приложение локальное: renderer грузится с file://, иконки лежат
+    рядом с index.html в app/images (см. npm run data:images). Поэтому в
+    img-src нужен и file: — без него Chromium не пускает локальные иконки
+    со страницы file://. Остальное (api.js, style.css) только со своего
+    origin, connect-src — исключительно локальный API.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https://cdn.cloudflare.steamstatic.com https://www.dota2.com; font-src 'self'; connect-src http://127.0.0.1:* ; form-action 'none'; base-uri 'none'" />
+  <title>DotaCustoms — хаб кастомов Dota 2</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-decor" aria-hidden="true"></div>
+
+  <!-- Шапка: логотип, навигация, аккаунт -->
+  <header class="app-header">
+    <a class="brand" href="#/" title="DotaCustoms">
+      <img class="brand-mark" src="icon.png" alt="" width="34" height="34" />
+      <span class="sr-only">DotaCustoms</span>
+      <span class="brand-text">
+        <b>DotaCustoms</b>
+        <i>хаб кастомов Dota 2</i>
+      </span>
+    </a>
+
+    <nav class="main-nav" id="main-nav" aria-label="Основная навигация">
+      <a href="#/" data-nav="/">Главная</a>
+      <a href="#/builds" data-nav="/builds">Билды</a>
+      <a href="#/tops" data-nav="/tops">Топы</a>
+      <a href="#/threads" data-nav="/threads">Ветки</a>
+      <a href="#/custom-items" data-nav="/custom-items">Кастом</a>
+      <a href="#/guides" data-nav="/guides">Обучение</a>
+      <a href="#/coaches" data-nav="/coaches">Coach</a>
+      <a href="#/admin" data-nav="/admin" data-staff="1">Админ</a>
+    </nav>
+
+    <div class="header-right" id="header-right"></div>
+  </header>
+
+  <!-- Основная область -->
+  <main class="app-main" id="view" tabindex="-1">
+    <div class="loading-panel"><div class="spinner"></div><p>Загружаем хаб…</p></div>
+  </main>
+
+  <footer class="app-footer">
+    <span id="footer-info">DotaCustoms</span>
+    <span class="footer-sep">·</span>
+    <span id="footer-patch"></span>
+    <span class="footer-sep">·</span>
+    <span>Работает полностью офлайн: база и справочник лежат на твоём диске</span>
+  </footer>
+
+  <!-- Контейнер для модалок и всплывающих сообщений -->
+  <div id="modal-root"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/markdown.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/picker.js"></script>
+  <script src="js/tierboard.js"></script>
+  <script src="js/roster.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/views/home.js"></script>
+  <script src="js/views/builds.js"></script>
+  <script src="js/views/build-editor.js"></script>
+  <script src="js/views/tops.js"></script>
+  <script src="js/views/threads.js"></script>
+  <script src="js/views/guides.js"></script>
+  <script src="js/views/profile.js"></script>
+  <script src="js/views/coaches.js"></script>
+  <script src="js/views/custom-items.js"></script>
+  <script src="js/views/create.js"></script>
+  <script src="js/views/reports.js"></script>
+  <script src="js/views/admin-extra.js"></script>
+  <script src="js/views/admin.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,848 @@
+{
+  "groups": [
+    {
+      "key": "magic",
+      "title": "Магические предметы",
+      "color": "purple"
+    },
+    {
+      "key": "physical",
+      "title": "Физические предметы",
+      "color": "green"
+    },
+    {
+      "key": "summoner",
+      "title": "Конверты призывателей",
+      "color": "gold"
+    },
+    {
+      "key": "books",
+      "title": "Книги",
+      "color": "blue"
+    }
+  ],
+  "source": {
+    "title": "Гайд на Custom Hero Chaos and Ratten Run [RUS/ENG]",
+    "author": "tv/kub3ik67",
+    "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3570972414",
+    "updated": "2026-06-23",
+    "also": [
+      {
+        "title": "Гайд для чайников в Custom Hero Chaos",
+        "author": "Catplay [JPD]",
+        "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3344429752",
+        "posted": "2024-10-06"
+      }
+    ],
+    "note": "Описания и числа взяты из игровых тултипов, снятых скриншотами в гайде, и расшифрованы автоматическим распознаванием текста. Названия, цены и крупные характеристики читаются надёжно; отдельные мелкие числа в длинных пассивках могут быть прочитаны с ошибкой — такие места помечены словами «не приведены» и не заполнены выдуманными значениями. Kast и Timber Saw Wheel в новом гайде не показаны, они оставлены из гайда 2024 года. Иконки 28 предметов вырезаны из тех же скриншотов, у Kast и Timber Saw Wheel взяты из старого гайда."
+  },
+  "modes": {
+    "chc": "Custom Hero Chaos",
+    "rr": "Ratten Run",
+    "*": "Оба режима",
+    "note": "Ratten Run — мод на базе CHC со своим балансом, отдельного магазина предметов у него нет. Единственное предметное отличие, о котором пишет гайд, — книги (Сила/Ловкость/Интеллект), выпадающие после потери Aegis. Поэтому у всех предметов mode = \"*\": они доступны в обоих режимах."
+  },
+  "items": [
+    {
+      "key": "kast_greatstaff_of_the_magna",
+      "name": "Kast, Greatstaff of the Magna",
+      "group": "magic",
+      "mode": "*",
+      "tier": 0,
+      "summary": "Магические криты и активная способность",
+      "body": "Магические криты и активная способность, которая связывает врагов в радиусе 600 на 2 секунды, увеличивая урон по ним на 25% на 17 секунд.",
+      "stats": {
+        "radius": 600,
+        "stun": 2,
+        "amp": 25,
+        "amp_time": 17
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103311302/AF9140D5B28B85576B905EF5CF80487BD7DC2B1D/",
+      "icon_from": "steam",
+      "legacy_id": 900000
+    },
+    {
+      "key": "azuresong_mageblade",
+      "name": "Azuresong Mageblade",
+      "group": "magic",
+      "mode": "*",
+      "tier": 0,
+      "cost": 5115,
+      "ability_type": "Пассивная",
+      "acts_on": "на вражеских существ",
+      "damage": "магический",
+      "upgrades": [
+        "star_design"
+      ],
+      "summary": "Филактерия: +180 магического урона и замедление 50%",
+      "body": "+52% к усилению восстановления маны. +32% к усилению вампиризма от заклинаний.\n\nПассивная способность — Филактерия: ваше следующее заклинание или предмет, наносящий урон, наносит дополнительный магический урон 180 цели и врагам в радиусе 250 и замедляет на 50% на 1.5 секунды. Пассивные способности этот эффект не активируют.\n\nПассивная способность — Мандо Рокет!: каждый уровень интеллекта даёт 0.66% усиления заклинания, каждый уровень силы или ловкости — 0.38%. При наведении на героя действует только 20% эффекта. Не влияет на заклинания, наносящие урон в процентах.\n\nПредмет уникален: его атрибуты и эффекты не складываются с такими же предметами.",
+      "stats": {
+        "mana_regen_amp": 52,
+        "spell_vamp_amp": 32,
+        "spell_damage": 180,
+        "radius": 250,
+        "slow": 50,
+        "slow_time": 1.5,
+        "spell_amp_int": 0.66,
+        "spell_amp_attr": 0.38
+      },
+      "related_items": [
+        "bloodstone"
+      ],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103337576/65E8CD000ACF798DEA1958D1EBE71A381FC3565C/",
+      "icon_from": "steam",
+      "legacy_id": 900002
+    },
+    {
+      "key": "star_design",
+      "name": "Star Design",
+      "group": "magic",
+      "mode": "*",
+      "tier": 1,
+      "cost": 10780,
+      "ability_type": "Пассивная",
+      "acts_on": "на вражеских существ",
+      "damage": "магический",
+      "upgrades_from": "azuresong_mageblade",
+      "summary": "Улучшенный Azuresong Mageblade: Филактерия 220 и заряды днём/ночью",
+      "body": "+57% к усилению восстановления маны. +37% к усилению вампиризма от заклинаний.\n\nПассивная способность — Филактерия: ваше следующее заклинание или предмет, наносящий урон, наносит дополнительный магический урон 220 цели и врагам в радиусе 370 и замедляет на 50% на 1.5 секунды.\n\nПассивная способность — Мандо Рокет!: каждый уровень интеллекта даёт 0.82% усиления заклинания, каждый уровень силы или ловкости — 0.42%. При наведении на героя действует только 20% эффекта.\n\nТретья пассивная способность: в дневное время каждые 150 зарядов предмета увеличивают общее усиление заклинания на 5%, ночью каждые 160 зарядов — на 15%.\n\nПредмет уникален: его атрибуты и эффекты не складываются с такими же предметами.",
+      "stats": {
+        "mana_regen_amp": 57,
+        "spell_vamp_amp": 37,
+        "spell_damage": 220,
+        "radius": 370,
+        "slow": 50,
+        "slow_time": 1.5,
+        "spell_amp_int": 0.82,
+        "spell_amp_attr": 0.42
+      },
+      "related_items": [
+        "bloodstone"
+      ],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103346820/C5241CB43CE2EA8685F96A0BBBACEE3180883855/",
+      "icon_from": "steam",
+      "legacy_id": 900003
+    },
+    {
+      "key": "stargazer",
+      "name": "Stargazer",
+      "group": "magic",
+      "mode": "*",
+      "tier": 0,
+      "cost": 3280,
+      "ability_type": "Направленная на точку",
+      "acts_on": "на вражеских существ",
+      "damage": "магический",
+      "summary": "Взрыв в радиусе 600 со шансом оглушить цель",
+      "body": "Направленная на точку. Наносит взрыв в радиусе 600 по врагам в точке, есть шанс оглушить цель. Слабая версия KAST, Greatstaff of the Magna: небольшие магические криты и пассивная способность.\n\nКоличественные значения оглушения и отката в источнике не приведены — они не выдуманы.",
+      "stats": {
+        "radius": 600
+      },
+      "related_items": [
+        "kast_greatstaff_of_the_magna"
+      ],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103356506/DCE7613D19152F266C4C1A5F71540BF2301245F9/",
+      "icon_from": "steam",
+      "legacy_id": 900001
+    },
+    {
+      "key": "bloodstone_ii",
+      "name": "Bloodstone II",
+      "group": "magic",
+      "mode": "*",
+      "tier": 0,
+      "cost": 7700,
+      "ability_type": "Ненаправленная",
+      "acts_on": "на союзных существ",
+      "summary": "+200% к восстановлению маны и заряды Магистрата",
+      "body": "+200% к усилению восстановления маны. +16% к урону от заклинаний. +30% к вампиризму заклинаниями.\n\nНенаправленная способность: превращает 45% от максимального запаса маны в здоровье в течение 2 секунд. Вампиризм заклинаниями от этого предмета увеличивается в 2.5 раза.\n\nПассивная способность — Карта Магистрата: каждый заряд увеличивает восстановление маны на 0.4, а урон от способностей — на 0.7%. Изначально у предмета 14 зарядов, по одному добавляется за каждое убийство рядом. При смерти владельца теряет 3 заряда.",
+      "stats": {
+        "mana_regen_amp": 200,
+        "spell_damage_pct": 16,
+        "spell_vamp": 30,
+        "mana_to_hp": 45,
+        "mana_to_hp_time": 2,
+        "vamp_mult": 2.5,
+        "charge_mana": 0.4,
+        "charge_spell": 0.7,
+        "charges": 14,
+        "charges_lost": 3
+      },
+      "related_items": [
+        "bloodstone"
+      ],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "torture_pipe",
+      "name": "Torture Pipe",
+      "group": "magic",
+      "mode": "*",
+      "tier": 0,
+      "cost": 6850,
+      "ability_type": "Пассивная",
+      "upgrades": [
+        "torture_pipe_2"
+      ],
+      "summary": "Бесконечная боль: +0.9% урона DoT за единицу атрибута",
+      "body": "Пассивная способность — Бесконечная боль: усиливает навыки, накладывающие периодический урон (DoT), в зависимости от характеристик героя. Повышает урон навыка за каждую единицу любого атрибута на 0.9%. Дополнительно даёт 30% сопротивления магии.\n\nЭффекты однотипных предметов не суммируются. На игроков действует только на 35%. Не влияет на навыки, наносящие урон в процентах.\n\nВ игре у предмета 5 уровней улучшения; здесь показаны ступени, которые описаны в гайде.",
+      "stats": {
+        "magic_resist": 30,
+        "dot_amp": 0.9,
+        "levels": 5
+      },
+      "related_items": [
+        "pipe"
+      ],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103515303/75D1A508163FCA6B7C4A37CBCF3DD1F375CABD4D/",
+      "icon_from": "steam",
+      "legacy_id": 900004
+    },
+    {
+      "key": "torture_pipe_2",
+      "name": "Torture Pipe II",
+      "group": "magic",
+      "mode": "*",
+      "tier": 1,
+      "cost": 14500,
+      "ability_type": "Пассивная",
+      "upgrades_from": "torture_pipe",
+      "summary": "Улучшенный Torture Pipe: +1.25% урона DoT за единицу атрибута",
+      "body": "Пассивная способность — Бесконечная боль: усиливает навыки, накладывающие периодический урон (DoT), в зависимости от характеристик героя. Повышает урон навыка за каждую единицу любого атрибута на 1.25% вместо 0.9% у Torture Pipe.\n\nЭффекты однотипных предметов не суммируются. На игроков действует только на 35%. Не влияет на навыки, наносящие урон в процентах.",
+      "stats": {
+        "dot_amp": 1.25
+      },
+      "related_items": [
+        "pipe"
+      ],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103524075/B34A2130992DA7B721F5D73679152EEDDBF94CF9/",
+      "icon_from": "steam",
+      "legacy_id": 900005
+    },
+    {
+      "key": "bitter_lineage",
+      "name": "Bitter Lineage",
+      "group": "physical",
+      "mode": "*",
+      "tier": 0,
+      "cost": 375,
+      "ability_type": "Пассивная",
+      "upgrades": [
+        "bitter_lineage_2"
+      ],
+      "summary": "Урон по крипам растёт с каждой ступенью",
+      "body": "Пассивная способность. +8 к урону атак. Разрушает броню цели.\n\nПервая ступень из пяти: дальше Bitter Lineage II → III → IV → V, каждая добавляет урон, уклонение и процент усиления урона навыков.",
+      "stats": {
+        "damage": 8,
+        "creep_damage": 10
+      },
+      "related_items": [],
+      "related_abilities": [
+        "tusk_snowball"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103429913/334B6D6184A398EABE13E20E64F22DB709DF1A5E/",
+      "icon_from": "steam",
+      "legacy_id": 900010
+    },
+    {
+      "key": "bitter_lineage_2",
+      "name": "Bitter Lineage II",
+      "group": "physical",
+      "mode": "*",
+      "tier": 1,
+      "cost": 2025,
+      "ability_type": "Пассивная",
+      "upgrades_from": "bitter_lineage",
+      "upgrades": [
+        "bitter_lineage_3"
+      ],
+      "summary": "+30 к урону, разрушает броню",
+      "body": "Пассивная способность. +30 к урону атак. Разрушает броню цели.",
+      "stats": {
+        "damage": 30,
+        "creep_damage": 10
+      },
+      "related_items": [],
+      "related_abilities": [
+        "tusk_snowball"
+      ],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "bitter_lineage_3",
+      "name": "Bitter Lineage III",
+      "group": "physical",
+      "mode": "*",
+      "tier": 2,
+      "cost": 4400,
+      "ability_type": "Пассивная",
+      "upgrades_from": "bitter_lineage_2",
+      "upgrades": [
+        "bitter_lineage_4"
+      ],
+      "summary": "+35 к урону и 20 к уклонению, +20% урона навыка",
+      "body": "Пассивная способность. +35 к урону атак. +20 к уклонению. Разрушает броню цели, усиливает урон навыков на 20% и даёт 300 дополнительной дальности атаки по крипам.",
+      "stats": {
+        "damage": 35,
+        "evasion": 20,
+        "creep_damage": 20,
+        "spell_amp": 20,
+        "creep_range": 300
+      },
+      "related_items": [],
+      "related_abilities": [
+        "tusk_snowball"
+      ],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "bitter_lineage_4",
+      "name": "Bitter Lineage IV",
+      "group": "physical",
+      "mode": "*",
+      "tier": 3,
+      "cost": 7900,
+      "ability_type": "Пассивная",
+      "upgrades_from": "bitter_lineage_3",
+      "upgrades": [
+        "bitter_lineage_5"
+      ],
+      "summary": "+45 к урону и 25 к уклонению, +40% урона навыка",
+      "body": "Пассивная способность. +45 к урону атак. +25 к уклонению. Разрушает броню цели, усиливает урон навыков на 40% и даёт 300 дополнительной дальности атаки по крипам.",
+      "stats": {
+        "damage": 45,
+        "evasion": 25,
+        "creep_damage": 40,
+        "spell_amp": 40,
+        "creep_range": 300
+      },
+      "related_items": [],
+      "related_abilities": [
+        "tusk_snowball"
+      ],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "bitter_lineage_5",
+      "name": "Bitter Lineage V",
+      "group": "physical",
+      "mode": "*",
+      "tier": 4,
+      "cost": 11850,
+      "ability_type": "Пассивная",
+      "upgrades_from": "bitter_lineage_4",
+      "summary": "+120 к урону и 30 к уклонению, +80% урона навыка",
+      "body": "Пассивная способность. +120 к урону атак. +30 к уклонению. Разрушает броню цели, усиливает урон навыков на 80% и даёт 300 дополнительной дальности атаки по крипам.",
+      "stats": {
+        "damage": 120,
+        "evasion": 30,
+        "creep_damage": 80,
+        "spell_amp": 80,
+        "creep_range": 300
+      },
+      "related_items": [],
+      "related_abilities": [
+        "tusk_snowball"
+      ],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "incomplete_breastplate",
+      "name": "Incomplete Breastplate",
+      "group": "physical",
+      "mode": "*",
+      "tier": 0,
+      "cost": 2760,
+      "ability_type": "Пассивная",
+      "upgrades": [
+        "cois_breastplate"
+      ],
+      "summary": "Щит от атак по крипам — до 600% макс. HP",
+      "body": "+20 к урону атак.\n\nПассивная способность: за нанесение физических атак по крипам даёт 50% щита. Максимальный щит — 600% от максимального здоровья.\n\nВторая пассивная способность — Тактический эксперт: атака, нанёсшая 25% урона от атаки по герою в ближнем бою, даёт усиление на 15 секунд.\n\nПочти главный предмет для физических героев, чтобы не умирать от волн крипов.",
+      "stats": {
+        "damage": 20,
+        "shield_pct": 50,
+        "creep_only": 1,
+        "max_shield": 600,
+        "debuff_time": 15
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103371796/1084BD7145FCC26354E860C1553F6A95E10B60D6/",
+      "icon_from": "steam",
+      "legacy_id": 900006
+    },
+    {
+      "key": "cois_breastplate",
+      "name": "Coi's Breastplate",
+      "group": "physical",
+      "mode": "*",
+      "tier": 1,
+      "cost": 9288,
+      "ability_type": "Ненаправленная",
+      "upgrades_from": "incomplete_breastplate",
+      "summary": "+70 к урону и 300 к скорости снарядов, иммунитет к замедлению",
+      "body": "+70 к урону атак. +300 к скорости снарядов.\n\nНенаправленная способность: в радиусе 600 замедляет врагов и даёт себе иммунитет к замедлениям на 4 секунды, а также сжигает ману противников. Улучшенный нагрудник с усиленной пассивкой щита.\n\nПассивная способность — Мобильность: атакующий вас враг в радиусе 40 получает усиление, а если он атакует героя, усиление срабатывает один раз за атаку.",
+      "stats": {
+        "damage": 70,
+        "projectile_speed": 300,
+        "radius": 600,
+        "debuff_time": 4
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103398210/35D11ED4ABBC017ED61370B9E130452F34F8874D/",
+      "icon_from": "steam",
+      "legacy_id": 900007
+    },
+    {
+      "key": "dark_moon_shard",
+      "name": "Dark Moon Shard",
+      "group": "physical",
+      "mode": "*",
+      "tier": 0,
+      "cost": 8000,
+      "ability_type": "Ненаправленная",
+      "summary": "Поглощение: навсегда минус 30% базовой атаки",
+      "body": "Ненаправленная способность — Поглощение: поглотите Dark Moon Shard, что позволит навсегда снизить базовый интервал атаки на 30%, но не менее чем на 1.1. Может быть использована только один раз.",
+      "stats": {
+        "base_attack_cut": 30,
+        "min_base_attack": 1.1
+      },
+      "related_items": [
+        "moon_shard"
+      ],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103408137/6F45F59E373ABE59B74908E8B42FEA3EBCB9B568/",
+      "icon_from": "steam",
+      "legacy_id": 900008
+    },
+    {
+      "key": "timber_saw_wheel",
+      "name": "Timber Saw Wheel",
+      "group": "physical",
+      "mode": "*",
+      "tier": 0,
+      "summary": "Рубит деревья вокруг и оглушает",
+      "body": "Может рубить вокруг себя деревья, нанося урон, и оглушает при ломании дерева.",
+      "stats": {
+        "stun": 1
+      },
+      "related_items": [],
+      "related_abilities": [
+        "shredder_timber_chain",
+        "shredder_whirling_death"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103412587/E5662F0EDD1B3ACA6637412133557C7F101A3E86/",
+      "icon_from": "steam",
+      "legacy_id": 900009
+    },
+    {
+      "key": "replica_rackatee",
+      "name": "Replica Rackatee",
+      "group": "physical",
+      "mode": "*",
+      "tier": 0,
+      "cost": 4500,
+      "ability_type": "Пассивная",
+      "acts_on": "на вражеских существ",
+      "damage": "физический",
+      "upgrades": [
+        "beadies_boomstick"
+      ],
+      "summary": "Только для дальних: сплэш 45% в радиусе 350",
+      "body": "Пассивная способность — Greater Scatterblast. Только для героев дальнего боя: атаки наносят 45% своего урона противникам в радиусе 350 вокруг основной цели. Повышает дальность атаки на 140.",
+      "stats": {
+        "splash": 45,
+        "splash_radius": 350,
+        "attack_range": 140,
+        "ranged_only": 1
+      },
+      "related_items": [],
+      "related_abilities": [
+        "sniper_shrapnel"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103456434/59D22E1EE58C5266E4D455C23714CBFC22EAE78B/",
+      "icon_from": "steam",
+      "legacy_id": 900011
+    },
+    {
+      "key": "beadies_boomstick",
+      "name": "Beadie's Boomstick",
+      "group": "physical",
+      "mode": "*",
+      "tier": 1,
+      "cost": 10500,
+      "ability_type": "Пассивная",
+      "acts_on": "на вражеских существ",
+      "damage": "физический",
+      "upgrades_from": "replica_rackatee",
+      "summary": "Улучшенная Replica Rackatee: сплэш 55% в радиусе 400",
+      "body": "Пассивная способность — Greater Scatterblast. Только для героев дальнего боя: атаки наносят 55% своего урона противникам в радиусе 400 вокруг основной цели. Повышает дальность атаки на 200.",
+      "stats": {
+        "splash": 55,
+        "splash_radius": 400,
+        "attack_range": 200,
+        "ranged_only": 1
+      },
+      "related_items": [],
+      "related_abilities": [
+        "sniper_shrapnel"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103463054/93D0D6E0273F5C7CDFC61E1AEEC035CD64B94D87/",
+      "icon_from": "steam",
+      "legacy_id": 900012
+    },
+    {
+      "key": "gang_letter",
+      "name": "Gang Letter",
+      "group": "summoner",
+      "mode": "*",
+      "tier": 0,
+      "cost": 2915,
+      "ability_type": "Пассивная",
+      "acts_on": "на союзных существ",
+      "upgrades": [
+        "gang_executive_letter"
+      ],
+      "summary": "Сапа Аура: баффы подконтрольным сущностям в радиусе 1200",
+      "body": "+5 к урону атак.\n\nПассивная способность — Сапа Аура (радиус 1200, перезарядка 6 секунд). Усиливает подконтрольных крипов: за 1 очко любого атрибута вы получаете 0.5% базового урона; за 1 очко силы — 2% максимального здоровья и вы наносите 0.4 ед. физического урона врагам; за 1 очко ловкости — 0.07 ед. брони и 0.4 ед. скорости атаки, а также дополнительно 10 ед. магического урона; за 1 очко интеллекта — 0.4% урона от заклинаний и 0.05% магической защиты.\n\nПредмет считается обувью: бонусы за скорость передвижения от нескольких предметов обуви не суммируются.",
+      "stats": {
+        "damage": 5,
+        "aura_radius": 1200,
+        "aura_cd": 6,
+        "attr_damage": 0.5,
+        "str_hp": 2,
+        "str_damage": 0.4,
+        "agi_armor": 0.07,
+        "agi_attack_speed": 0.4,
+        "magic_damage": 10,
+        "int_spell": 0.4,
+        "int_mres": 0.05
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103477924/6AFA965DBC45686685FB519E66A2DC737D20FF41/",
+      "icon_from": "steam",
+      "legacy_id": 900013
+    },
+    {
+      "key": "gang_executive_letter",
+      "name": "Gang Executive Letter",
+      "group": "summoner",
+      "mode": "*",
+      "tier": 1,
+      "cost": 6515,
+      "ability_type": "Пассивная",
+      "acts_on": "на союзных существ",
+      "upgrades_from": "gang_letter",
+      "upgrades": [
+        "gang_ghost_stories",
+        "gang_meal_voucher",
+        "gang_challenge",
+        "gang_plane_ticket"
+      ],
+      "summary": "Усиленная Сапа Аура: 0.6% урона за очко атрибута",
+      "body": "+5 к урону атак.\n\nПассивная способность — Сапа Аура (радиус 1200, перезарядка 6 секунд). За 1 очко любого атрибута вы получаете 0.6% базового урона; за 1 очко силы — 3% максимального здоровья и вы наносите 1 ед. физического урона врагам; за 1 очко ловкости — 0.13 ед. брони и 0.6 ед. скорости атаки, а также дополнительно 15 ед. магического урона; за 1 очко интеллекта — 0.7% урона от заклинаний и 0.07% магической защиты.\n\nПредмет считается обувью: бонусы за скорость передвижения не суммируются.",
+      "stats": {
+        "damage": 5,
+        "aura_radius": 1200,
+        "aura_cd": 6,
+        "attr_damage": 0.6,
+        "str_hp": 3,
+        "str_damage": 1,
+        "agi_armor": 0.13,
+        "agi_attack_speed": 0.6,
+        "magic_damage": 15,
+        "int_spell": 0.7,
+        "int_mres": 0.07
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103483403/483714B3DC7254915355591E7A056EF757124C34/",
+      "icon_from": "steam",
+      "legacy_id": 900014
+    },
+    {
+      "key": "gang_ghost_stories",
+      "name": "Gang Ghost Stories",
+      "group": "summoner",
+      "mode": "*",
+      "tier": 2,
+      "cost": 11915,
+      "ability_type": "Ненаправленная",
+      "acts_on": "на союзных существ",
+      "upgrades_from": "gang_executive_letter",
+      "summary": "Пробивает призрачную форму: +70% магического урона",
+      "body": "+5 к урону атак. +8% к урону. +300 к скорости снарядов.\n\nНенаправленная способность: позволяет союзникам под Сапа Аурой атаковать юнитов в эфирной форме (невосприимчивы к физическим атакам), нанося дополнительные 70% магического урона от атаки. Позволяет поделиться своим усилением заклинаний на 70% с юнитами, которых вы призываете.\n\nПассивная способность — Сапа Аура (радиус 1200, перезарядка 6 секунд). За 1 очко любого атрибута вы получаете 0.7% базового урона; за 1 очко силы — 4% максимального здоровья и вы наносите 2 ед. физического урона врагам; за 1 очко ловкости — 0.19 ед. брони и 0.8 ед. скорости атаки, а также дополнительно 25 ед. магического урона; за 1 очко интеллекта — 1% урона от заклинаний и 0.1% магической защиты.",
+      "stats": {
+        "damage": 5,
+        "damage_pct": 8,
+        "projectile_speed": 300,
+        "aura_radius": 1200,
+        "aura_cd": 6,
+        "attr_damage": 0.7,
+        "str_hp": 4,
+        "str_damage": 2,
+        "agi_armor": 0.19,
+        "agi_attack_speed": 0.8,
+        "magic_damage": 25,
+        "int_spell": 1,
+        "int_mres": 0.1,
+        "ghost_damage": 70,
+        "share_spell_amp": 70
+      },
+      "related_items": [],
+      "related_abilities": [
+        "dark_willow_shadow_realm",
+        "dark_willow_bramble_maze"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103486984/58F488DDB91B65E8B447BC71A50470A1E94F0B9E/",
+      "icon_from": "steam",
+      "legacy_id": 900015
+    },
+    {
+      "key": "gang_meal_voucher",
+      "name": "Gang Meal Voucher",
+      "group": "summoner",
+      "mode": "*",
+      "tier": 2,
+      "cost": 13915,
+      "ability_type": "Пассивная",
+      "acts_on": "на союзных существ",
+      "upgrades_from": "gang_executive_letter",
+      "summary": "Реген от макс. HP и перенаправление 80% урона в крипа",
+      "body": "+5 к урону атак. +1.6% максимального здоровья.\n\nПассивная способность — Воля Орды (радиус 1200, перезарядка 5 секунд): перенаправляет 80% получаемого урона союзнику под Сапа Аурой, отдавая приоритет юниту с наибольшим запасом здоровья.\n\nПассивная способность — Сапа Аура (радиус 1200, перезарядка 6 секунд). За 1 очко любого атрибута вы получаете 0.7% базового урона; за 1 очко силы — 4% максимального здоровья и вы наносите 2 ед. физического урона врагам; за 1 очко ловкости — 0.19 ед. брони и 0.8 ед. скорости атаки, а также дополнительно 20 ед. магического урона; за 1 очко интеллекта — 1% урона от заклинаний и 0.1% магической защиты.\n\nТакже даёт +20% общего вампиризма (против подопечных — 70%), +18% дополнительного урона и +4 брони.",
+      "stats": {
+        "damage": 5,
+        "max_health": 1.6,
+        "redirect": 80,
+        "cooldown": 5,
+        "aura_radius": 1200,
+        "aura_cd": 6,
+        "attr_damage": 0.7,
+        "str_hp": 4,
+        "str_damage": 2,
+        "agi_armor": 0.19,
+        "agi_attack_speed": 0.8,
+        "magic_damage": 20,
+        "int_spell": 1,
+        "int_mres": 0.1,
+        "lifesteal": 20,
+        "lifesteal_penalty": 70,
+        "damage_pct": 18,
+        "armor": 4
+      },
+      "related_items": [],
+      "related_abilities": [
+        "lone_druid_spirit_link"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103494849/BE85650591C3C3142D5BC389EC51E9F8515CEF7C/",
+      "icon_from": "steam",
+      "legacy_id": 900016
+    },
+    {
+      "key": "gang_challenge",
+      "name": "Gang Challenge",
+      "group": "summoner",
+      "mode": "*",
+      "tier": 2,
+      "cost": 14090,
+      "ability_type": "Пассивная",
+      "acts_on": "на союзных существ",
+      "upgrades_from": "gang_executive_letter",
+      "summary": "Подконтрольные сущности игнорируют 80% уклонения",
+      "body": "+5 к урону атак.\n\nПассивная способность — Street Brawl (перезарядка 6 секунд): союзники под Сапа Аурой имеют 80% шанс проигнорировать уклонение при каждой атаке и 10% шанс оглушить цель на 1.2 секунды. На крипов перезарядки нет.\n\nПассивная способность — Сапа Аура (радиус 1200, перезарядка 6 секунд). За 1 очко любого атрибута вы получаете 0.7% базового урона; за 1 очко силы — 4% максимального здоровья и вы наносите 2 ед. физического урона врагам; за 1 очко ловкости — 0.19 ед. брони и 0.8 ед. скорости атаки, а также дополнительно 20 ед. магического урона; за 1 очко интеллекта — 1% урона от заклинаний и 0.1% магической защиты.",
+      "stats": {
+        "damage": 5,
+        "evasion_ignore": 80,
+        "stun_chance": 10,
+        "stun": 1.2,
+        "cooldown": 6,
+        "aura_radius": 1200,
+        "aura_cd": 6,
+        "attr_damage": 0.7,
+        "str_hp": 4,
+        "str_damage": 2,
+        "agi_armor": 0.19,
+        "agi_attack_speed": 0.8,
+        "magic_damage": 20,
+        "int_spell": 1,
+        "int_mres": 0.1
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103501885/B46327F5D13C3CE7FB68FA223C44468D82E76B5A/",
+      "icon_from": "steam",
+      "legacy_id": 900017
+    },
+    {
+      "key": "gang_plane_ticket",
+      "name": "Gang Plane Ticket",
+      "group": "summoner",
+      "mode": "*",
+      "tier": 2,
+      "cost": 14915,
+      "ability_type": "Направленная на точку",
+      "acts_on": "на союзных существ",
+      "upgrades_from": "gang_executive_letter",
+      "summary": "Телепорт группы и страх на врагов",
+      "body": "+40 к урону атак.\n\nНаправленная на точку способность: телепортирует союзников под Сапа Аурой в самое дальнее место в радиусе 600 и наводит страх на врагов на 2 секунды. Радиус воздействия — 300.\n\nТакже даёт +150 к дальности атаки для героев дальнего боя и +50 для героев ближнего боя. Каждая атака с вероятностью 30% наносит 160% урона; при атаке врага под действием страха — тоже 160%.\n\nПассивная способность — Сапа Аура (радиус 1200, перезарядка 6 секунд). За 1 очко любого атрибута вы получаете 0.7% базового урона; за 1 очко силы — 4% максимального здоровья и вы наносите 2 ед. физического урона врагам; за 1 очко ловкости — 0.19 ед. брони и 0.8 ед. скорости атаки, а также дополнительно 20 ед. магического урона; за 1 очко интеллекта — 1% урона от заклинаний и 0.1% магической защиты.",
+      "stats": {
+        "damage": 40,
+        "radius": 600,
+        "effect_radius": 300,
+        "fear": 2,
+        "attack_range_ranged": 150,
+        "attack_range_melee": 50,
+        "crit_chance": 30,
+        "crit_damage": 160,
+        "aura_radius": 1200,
+        "aura_cd": 6,
+        "attr_damage": 0.7,
+        "str_hp": 4,
+        "str_damage": 2,
+        "agi_armor": 0.19,
+        "agi_attack_speed": 0.8,
+        "magic_damage": 20,
+        "int_spell": 1,
+        "int_mres": 0.1
+      },
+      "related_items": [],
+      "related_abilities": [
+        "tusk_snowball"
+      ],
+      "steam_image": "https://images.steamusercontent.com/ugc/2464122525103508021/315911D1831339C6424B66970D481A7516FC7284/",
+      "icon_from": "steam",
+      "legacy_id": 900018
+    },
+    {
+      "key": "book_of_strength",
+      "name": "Книга Силы",
+      "name_en": "Book of Strength",
+      "group": "books",
+      "mode": "*",
+      "tier": 0,
+      "cost": 500,
+      "ability_type": "Ненаправленная",
+      "summary": "Навсегда повышает Силу на 3",
+      "body": "Ненаправленная способность: навсегда повышает Силу на 3.\n\nВ Ratten Run книги выпадают после потери Aegis — это способ дёшево и постоянно прокачать героя.",
+      "stats": {
+        "attr": 3
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "book_of_agility",
+      "name": "Книга Ловкости",
+      "name_en": "Book of Agility",
+      "group": "books",
+      "mode": "*",
+      "tier": 0,
+      "cost": 500,
+      "ability_type": "Ненаправленная",
+      "summary": "Навсегда повышает Ловкость на 3",
+      "body": "Ненаправленная способность: навсегда повышает Ловкость на 3.\n\nВ Ratten Run книги выпадают после потери Aegis — это способ дёшево и постоянно прокачать героя.",
+      "stats": {
+        "attr": 3
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "book_of_intellect",
+      "name": "Книга Интеллекта",
+      "name_en": "Book of Intellect",
+      "group": "books",
+      "mode": "*",
+      "tier": 0,
+      "cost": 500,
+      "ability_type": "Ненаправленная",
+      "summary": "Навсегда повышает Интеллект на 3",
+      "body": "Ненаправленная способность: навсегда повышает Интеллект на 3.\n\nВ Ratten Run книги выпадают после потери Aegis — это способ дёшево и постоянно прокачать героя.",
+      "stats": {
+        "attr": 3
+      },
+      "related_items": [],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "book_of_summoner",
+      "name": "Book of Summoner",
+      "name_en": "Book of Summoner",
+      "group": "books",
+      "mode": "*",
+      "tier": 0,
+      "cost": 2650,
+      "ability_type": "Ненаправленная",
+      "summary": "Меняет один навык на случайный",
+      "body": "Ненаправленная способность: применяется «Повтор призыва» — забывается случайный навык с возвратом очков (приоритет у навыков без призыва), после чего вы получаете случайный навык призыва.\n\nСекретная книга, содержащая часть знаний Сумеречного Дракона.",
+      "stats": {},
+      "related_items": [],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "tome_of_retraining",
+      "name": "Tome of Retraining",
+      "name_en": "Tome of Retraining",
+      "group": "books",
+      "mode": "*",
+      "tier": 0,
+      "cost": 2900,
+      "ability_type": "Ненаправленная",
+      "summary": "Заменяет одно своё умение на другое",
+      "body": "Ненаправленная способность — Канга (Retrain): выберите одно из своих умений и замените его на другое.\n\nКнига подготовлена. Страницы заменены кем-то другим.",
+      "stats": {},
+      "related_items": [
+        "book_of_summoner"
+      ],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "book_of_paragon",
+      "name": "Book of Paragon",
+      "name_en": "Book of Paragon",
+      "group": "books",
+      "mode": "*",
+      "tier": 1,
+      "cost": 13000,
+      "ability_type": "Ненаправленная",
+      "summary": "Добавляет новый навык, максимум 1 раз",
+      "body": "Ненаправленная способность — изучение навыков: максимум навыков +1, появляется новый навык. Может быть применена только один раз.\n\nСекретная книга, содержащая осколок души Тёмного Повелителя.",
+      "stats": {
+        "max_skills": 1,
+        "uses": 1
+      },
+      "related_items": [
+        "ultimate_scepter"
+      ],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    }
+  ]
+}

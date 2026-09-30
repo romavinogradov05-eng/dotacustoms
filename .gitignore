@@ -1,0 +1,27 @@
+# зависимости
+node_modules/
+
+# сборка
+dist/
+
+# сгенерированные данные и ресурсы — восстанавливаются скриптами
+build/
+app/icon.png
+app/images/
+data/dota.json
+data/base/
+
+# рабочая база и её бэкапы — на GitHub им не место
+.data/
+backups/
+*.db
+*.db.lock/
+*.db-shm
+*.db-wal
+test-report.txt
+
+# всякое
+*.log
+.DS_Store
+Thumbs.db
+.env
