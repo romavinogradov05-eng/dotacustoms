@@ -105,7 +105,7 @@
     const head = h('div.page-head', [
       h('h1', { text: 'Билды' }),
       h('div.sub', { text: 'Сборки предметов, порядок скиллов и таланты. Подтверждённые отмечены значком Coach.' }),
-      h('div.btn-row', h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' })),
+      store.isStaff() ? h('div.btn-row', h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' })) : null,
     ]);
     host.appendChild(head);
 

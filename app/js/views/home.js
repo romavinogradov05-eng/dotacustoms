@@ -45,8 +45,8 @@
           }),
         ]),
         h('div.btn-row', [
-          h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' }),
-          h('a.btn', { href: '#/threads/new', text: '⑂ Создать ветку' }),
+          store.isStaff() ? h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' }) : null,
+          store.isStaff() ? h('a.btn', { href: '#/threads/new', text: '⑂ Создать ветку' }) : null,
           h('a.btn.btn-ghost', { href: '#/guides', text: '📘 Гайд для новичка' }),
         ]),
       ]),
@@ -84,7 +84,7 @@
         : common.empty({
           icon: '🛠', title: 'Пока нет ни одного билда',
           text: 'Стань первым: собери сборку предметов и скиллов для CHC или Ratten Run.',
-          action: () => router.go('/builds/new'), actionLabel: 'Собрать билд',
+          action: store.isStaff() ? () => router.go('/builds/new') : null, actionLabel: 'Собрать билд',
         }),
     ]));
 
@@ -109,7 +109,7 @@
         : common.empty({
           icon: '🐛', title: 'Веток пока нет',
           text: 'Нашёл баг или придумал фичу? Заведи ветку — автор кастома всё увидит.',
-          action: () => router.go('/threads/new'), actionLabel: 'Создать ветку',
+          action: store.isStaff() ? () => router.go('/threads/new') : null, actionLabel: 'Создать ветку',
         }),
     ]));
 

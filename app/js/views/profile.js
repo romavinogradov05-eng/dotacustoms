@@ -75,7 +75,7 @@
       }) : null,
       isMe ? h('div.btn-row', { style: { marginTop: '14px' } },
         h('button.btn', { type: 'button', text: '✎ Редактировать профиль', onclick: () => openEdit(user) }),
-        h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' })) : null,
+        store.isStaff() ? h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' }) : null) : null,
     ]));
 
     /* ── статистика ── */
@@ -115,7 +115,7 @@
           content.appendChild(common.empty({
             icon: '🧰', title: 'Пока нет опубликованных билдов',
             text: isMe ? 'Собери первый билд — это главный способ показать свою игру.' : 'Этот игрок ещё ничего не выложил.',
-            action: isMe ? () => router.go('/builds/new') : null,
+            action: (isMe && store.isStaff()) ? () => router.go('/builds/new') : null,
             actionLabel: 'Собрать билд',
           }));
           return;
@@ -145,7 +145,7 @@
           content.appendChild(common.empty({
             icon: '🏆', title: 'Пока нет топов',
             text: isMe ? 'Собери тир-лист героев или нейтралок.' : 'Этот игрок ещё ничего не выложил.',
-            action: isMe ? () => router.go('/tops/new') : null, actionLabel: 'Собрать топ',
+            action: (isMe && store.isStaff()) ? () => router.go('/tops/new') : null, actionLabel: 'Собрать топ',
           }));
           return;
         }
@@ -170,7 +170,7 @@
         content.appendChild(common.empty({
           icon: '⑂', title: 'Пока нет веток',
           text: isMe ? 'Заведи ветку, если нашёл баг или придумал фичу.' : 'Этот игрок ещё ничего не выложил.',
-          action: isMe ? () => router.go('/threads/new') : null, actionLabel: 'Создать ветку',
+          action: (isMe && store.isStaff()) ? () => router.go('/threads/new') : null, actionLabel: 'Создать ветку',
         }));
         return;
       }

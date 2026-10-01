@@ -180,6 +180,13 @@ async function main() {
   ok('регистрация третьего игрока', reg3.status === 201);
   const plainToken = reg3.data.token;
 
+  // Второй сразу получает Coach в CHC: создавать билды, топы, ветки и гайды
+  // могут только Coach и админы, обычный игрок на создании получает 403.
+  const grantEarly = await api('POST', `/api/admin/users/${reg2.data.user.id}/role`, {
+    token: adminToken, body: { role: 'coach', coach_scopes: ['chc'] },
+  });
+  ok('второму игроку выдана роль coach', grantEarly.status === 200, `статус ${grantEarly.status}`);
+
   const dup = await api('POST', '/api/auth/register', {
     body: { username: 'tester', nickname: 'Клон', password: 'secret123' },
   });
@@ -245,19 +252,20 @@ async function main() {
   ok('создание билда', build.status === 201 && !!build.data?.id, JSON.stringify(build.data));
   const buildId = build.data?.id;
 
-  // Билд от обычного игрока уходит на подтверждение администратору.
-  ok('новый билд ждёт подтверждения', build.data?.pending === true,
+  // Создавать могут только Coach и админы — их билды видны всем сразу,
+  // без очереди проверки.
+  ok('Coach публикует сразу', build.data?.pending === false && build.data?.moderation === 'approved',
     `moderation = ${build.data?.moderation}`);
   const guestList = await api('GET', '/api/builds?mode=chc');
-  ok('гость не видит неподтверждённый билд',
-    !(guestList.data?.items || []).some(b => b.id === buildId));
+  ok('гость видит билд в общей ленте',
+    (guestList.data?.items || []).some(b => b.id === buildId));
   const guestOne = await api('GET', `/api/builds/${buildId}`);
-  ok('гость не открывает неподтверждённый билд', guestOne.status === 404, `status ${guestOne.status}`);
+  ok('гость открывает билд', guestOne.status === 200, `status ${guestOne.status}`);
   const list = await api('GET', '/api/builds?mode=chc', { token: adminToken });
-  ok('админ видит билд в очереди', (list.data?.items || []).some(b => b.id === buildId));
+  ok('админ видит билд в списке', (list.data?.items || []).some(b => b.id === buildId));
 
   const one = await api('GET', `/api/builds/${buildId}`, { token: userToken });
-  ok('автор видит свой неподтверждённый билд', one.status === 200, `status ${one.status}`);
+  ok('автор видит свой билд', one.status === 200, `status ${one.status}`);
   ok('билд отдаёт предметы', one.data?.build?.items?.[0]?.item_id === itemId);
   ok('билд отдаёт таланты', one.data?.build?.talents?.length === maxTalents);
   ok('автор может редактировать', one.data?.build?.can_edit === true);
@@ -383,7 +391,7 @@ async function main() {
   // ── права Coach ──────────────────────────────────────────────────────
   console.log('\nРоли Coach и админа');
   const playerVerify = await api('POST', `/api/builds/${buildId}/verify`, {
-    token: userToken, body: { approved: true },
+    token: plainToken, body: { approved: true },
   });
   ok('игрок не может подтвердить билд (403)', playerVerify.status === 403);
 
@@ -584,7 +592,7 @@ async function main() {
     token: userToken,
     body: { title: 'Мой гайд по дракам', body: '## Разбор\n\nПодробный разбор драки в третьем тире.', category: 'rr' },
   });
-  ok('игрок может написать свой гайд', userGuide.status === 201);
+  ok('Coach может написать гайд', userGuide.status === 201);
 
   // ── жалобы ───────────────────────────────────────────────────────────
   console.log('\nЖалобы и профиль');
@@ -729,15 +737,41 @@ async function main() {
   });
   ok('админ публикует без подтверждения', adminBuild.data?.pending === false);
 
-  // Очередь: обычный игрок
-  const queueBuild = await api('POST', '/api/builds', {
+  // Обычный игрок не может создавать контент: билды, топы, ветки, гайды.
+  const deniedBuild = await api('POST', '/api/builds', {
     token: plainUserToken,
-    body: { mode: 'chc', title: 'Ждёт очереди', items: [], skills: [], talents: [] },
+    body: { mode: 'chc', title: 'Хочу билд', items: [], skills: [], talents: [] },
   });
-  ok('билд игрока ждёт подтверждения', queueBuild.data?.pending === true);
+  ok('игрок не может создать билд (403)', deniedBuild.status === 403, `статус ${deniedBuild.status}`);
+  const deniedTop = await api('POST', '/api/tops', {
+    token: plainUserToken,
+    body: {
+      mode: 'chc', kind: 'heroes', title: 'Хочу топ',
+      entries: heroRefs.slice(0, 4).map((ref_id, i) => ({ ref_id, rank: i + 1, tier: 'S' })),
+    },
+  });
+  ok('игрок не может создать топ (403)', deniedTop.status === 403, `статус ${deniedTop.status}`);
+  const deniedThread = await api('POST', '/api/threads', {
+    token: plainUserToken,
+    body: { mode: 'chc', category: 'bug', title: 'Хочу ветку', body: 'Достаточно длинный текст ветки.' },
+  });
+  ok('игрок не может создать ветку (403)', deniedThread.status === 403, `статус ${deniedThread.status}`);
+  const deniedGuide = await api('POST', '/api/guides', {
+    token: plainUserToken,
+    body: { title: 'Хочу гайд', body: '## Разбор\n\nДостаточно длинный текст гайда для проверки.' },
+  });
+  ok('игрок не может создать гайд (403)', deniedGuide.status === 403, `статус ${deniedGuide.status}`);
+
+  // Очередь: у опубликованного контента её нет, туда попадают черновики.
+  const queueBuild = await api('POST', '/api/builds', {
+    token: plainToken,
+    body: { mode: 'chc', title: 'Черновик на разбор', is_draft: true, items: [], skills: [], talents: [] },
+  });
+  ok('черновик уходит со статусом pending', queueBuild.data?.pending === true,
+    `moderation = ${queueBuild.data?.moderation}`);
 
   const queue = await api('GET', '/api/admin/queue?type=build', { token: adminToken });
-  ok('билд игрока попал в очередь админа',
+  ok('черновик попал в очередь админа',
     (queue.data?.items || []).some(b => b.id === queueBuild.data.id));
   ok('в очереди видно ник автора', (queue.data?.items || [])
     .some(b => b.id === queueBuild.data.id && !!b.author?.nickname));
@@ -755,42 +789,42 @@ async function main() {
   const approve = await api('POST', `/api/admin/queue/build/${queueBuild.data.id}`, {
     token: adminToken, body: { decision: 'approve', note: 'Нормальный билд' },
   });
-  ok('админ подтвердил билд', approve.status === 200 && approve.data?.status === 'approved');
+  ok('админ подтвердил черновик', approve.status === 200 && approve.data?.status === 'approved');
   const nowVisible = await api('GET', '/api/builds');
-  ok('после подтверждения билд в общей ленте',
-    (nowVisible.data?.items || []).some(b => b.id === queueBuild.data.id));
+  ok('после подтверждения черновик одобрен',
+    (await api('GET', `/api/builds/${queueBuild.data.id}`, { token: plainToken })).data?.build?.moderation === 'approved');
 
   // Отклоняем
   const queueBuild2 = await api('POST', '/api/builds', {
-    token: plainUserToken,
-    body: { mode: 'chc', title: 'Отклоним этот', items: [], skills: [], talents: [] },
+    token: plainToken,
+    body: { mode: 'chc', title: 'Отклоним этот', is_draft: true, items: [], skills: [], talents: [] },
   });
   const reject = await api('POST', `/api/admin/queue/build/${queueBuild2.data.id}`, {
     token: adminToken, body: { decision: 'reject', note: 'Не рабочает сборка' },
   });
-  ok('админ отклонил билд', reject.status === 200 && reject.data?.status === 'rejected');
+  ok('админ отклонил черновик', reject.status === 200 && reject.data?.status === 'rejected');
   const notVisible = await api('GET', '/api/builds');
-  ok('отклонённый билд не в общей ленте',
+  ok('отклонённый черновик не в общей ленте',
     !(notVisible.data?.items || []).some(b => b.id === queueBuild2.data.id));
-  const authorStillSees = await api('GET', `/api/builds/${queueBuild2.data.id}`, { token: plainUserToken });
-  ok('автор видит свой отклонённый билд', authorStillSees.status === 200);
+  const authorStillSees = await api('GET', `/api/builds/${queueBuild2.data.id}`, { token: plainToken });
+  ok('автор видит свой отклонённый черновик', authorStillSees.status === 200);
 
-  // Топы проходят ту же очередь
+  // Топы проходят ту же очередь — черновиком
   const queueTop = await api('POST', '/api/tops', {
-    token: plainUserToken,
+    token: plainToken,
     body: {
-      mode: 'chc', kind: 'heroes', title: 'Топ на проверку',
+      mode: 'chc', kind: 'heroes', title: 'Топ-черновик', is_draft: true,
       entries: heroRefs.slice(0, 4).map((ref_id, i) => ({ ref_id, rank: i + 1, tier: 'S' })),
     },
   });
-  ok('топ игрока ждёт подтверждения', queueTop.data?.pending === true);
+  ok('топ-черновик уходит со статусом pending', queueTop.data?.pending === true);
   const topQueue = await api('GET', '/api/admin/queue?type=top', { token: adminToken });
   ok('топ попал в очередь', (topQueue.data?.items || []).some(t => t.id === queueTop.data.id));
   await api('POST', `/api/admin/queue/top/${queueTop.data.id}`, {
     token: adminToken, body: { decision: 'approve' },
   });
-  const topsNow = await api('GET', '/api/tops');
-  ok('подтверждённый топ в ленте', (topsNow.data?.items || []).some(t => t.id === queueTop.data.id));
+  const topAfter = await api('GET', `/api/tops/${queueTop.data.id}`, { token: plainToken });
+  ok('подтверждённый топ-черновик одобрен', topAfter.data?.top?.moderation === 'approved');
 
   // Категории топов — отдельные: герои, скиллы, нейтралки
   const kindsOk = [];
@@ -818,14 +852,14 @@ async function main() {
   /* ══ уведомления (ячейка в шапке) ════════════════════════════════ */
   console.log('\nУведомления');
 
-  // Уведомления получает автор неподтверждённого контента — обычный игрок.
-  const unread = await api('GET', '/api/notifications/unread', { token: plainUserToken });
+  // Уведомления получает автор черновика, по которому приняли решение.
+  const unread = await api('GET', '/api/notifications/unread', { token: plainToken });
   ok('счётчик непрочитанных отдаётся', Number.isInteger(unread.data?.unread),
     `непрочитанных: ${unread.data?.unread}`);
   ok('счётчик положительный после модерации', unread.data?.unread > 0,
     `непрочитанных: ${unread.data?.unread}`);
 
-  const noteList = await api('GET', '/api/notifications', { token: plainUserToken });
+  const noteList = await api('GET', '/api/notifications', { token: plainToken });
   ok('уведомления приходят', (noteList.data?.items || []).length > 0,
     `${noteList.data?.items?.length} шт.`);
   ok('есть уведомление о подтверждении',
@@ -834,8 +868,8 @@ async function main() {
   ok('в уведомлении есть ссылка', !!(noteList.data?.items || [])[0]?.link);
 
   const firstNote = noteList.data?.items?.[0];
-  await api('POST', `/api/notifications/${firstNote.id}/read`, { token: plainUserToken });
-  const afterRead = await api('GET', '/api/notifications/unread', { token: plainUserToken });
+  await api('POST', `/api/notifications/${firstNote.id}/read`, { token: plainToken });
+  const afterRead = await api('GET', '/api/notifications/unread', { token: plainToken });
   ok('отметка «прочитано» уменьшает счётчик',
     afterRead.data?.unread === unread.data.unread - 1,
     `было ${unread.data?.unread}, стало ${afterRead.data?.unread}`);
@@ -846,10 +880,12 @@ async function main() {
   const guestNotes = await api('GET', '/api/notifications');
   ok('гостю уведомления не отдаются', guestNotes.status === 401);
 
-  // Админ тоже получил уведомление о новом контенте
-  const adminNotes = await api('GET', '/api/notifications', { token: adminToken });
-  ok('админ получил уведомление о новом билде',
-    (adminNotes.data?.items || []).some(n => /ждёт подтверждения/.test(n.title)));
+  // Опубликованный контент в очередь не попадает — уведомлять не о чем:
+  // очередь пуста, кроме старых черновиков.
+  const queueAfter = await api('GET', '/api/admin/queue?type=build', { token: adminToken });
+  const leftovers = (queueAfter.data?.items || []).filter(b => b.id !== draft.data?.id);
+  ok('решённые черновики ушли из очереди', leftovers.length === 0,
+    `в очереди: ${leftovers.map(b => b.title).join(', ')}`);
 
   /* ══ заявления в свободной форме ═════════════════════════════════ */
   console.log('\nЗаявления и жалобы');

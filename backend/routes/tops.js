@@ -11,7 +11,7 @@ const { MODE_KEYS, TOP_KIND_KEYS, TOP_TIERS, LIMITS, ROLES } = require('../confi
 const {
   str, oneOf, bool, bad, notFound, forbidden, nowIso, paging, timeAgo,
 } = require('../util');
-const { requireAuth, isCoachFor } = require('../auth');
+const { requireAuth, requireStaff, isCoachFor } = require('../auth');
 const { wrap } = require('../http');
 const { MODERATION, MODERATION_KEYS, moderationFor, notifyAdmins } = require('../notify');
 
@@ -168,13 +168,14 @@ module.exports = function topRoutes(ctx) {
   }));
 
   // ── создать ──────────────────────────────────────────────────────────
-  router.post('/', requireAuth, wrap((req, res) => {
+  // Только Coach и администраторы: топы пишет редакция, игроки голосуют.
+  router.post('/', requireStaff, wrap((req, res) => {
     const mode = oneOf(req.body.mode, MODE_KEYS, { field: 'режим' });
     const kind = oneOf(req.body.kind, TOP_KIND_KEYS, { field: 'вид топа' });
     const title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });
     const entries = cleanEntries(req.body.entries);
     const isDraft = bool(req.body.is_draft, false) ? 1 : 0;
-    // Coach и админ публикуют сразу, обычному игроку нужно подтверждение.
+    // Сюда доходят только Coach и админы (requireStaff) — публикуют сразу.
     const moderation = moderationFor(req.user, isDraft);
 
     const now = nowIso();

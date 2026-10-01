@@ -13,7 +13,7 @@ const {
   str, int, oneOf, bool, bad, notFound, forbidden, nowIso, paging, timeAgo,
   cleanItems, cleanNeutrals, cleanSkills, cleanTalents,
 } = require('../util');
-const { requireAuth, isCoachFor } = require('../auth');
+const { requireAuth, requireStaff, isCoachFor } = require('../auth');
 const { wrap } = require('../http');
 const { MODERATION, MODERATION_KEYS, moderationFor, notifyAdmins } = require('../notify');
 
@@ -226,12 +226,15 @@ module.exports = function buildRoutes(ctx) {
   }));
 
   // ── создать ──────────────────────────────────────────────────────────
-  router.post('/', requireAuth, wrap((req, res) => {
+  // Создавать билды могут только Coach и администраторы — так решил владелец
+  // хаба. Обычный игрок участвует голосами, комментариями, жалобами и
+  // заявлениями. Правка и удаление — как раньше: автор и администратор.
+  router.post('/', requireStaff, wrap((req, res) => {
     const mode = oneOf(req.body.mode, MODE_KEYS, { field: 'режим' });
     const title = str(req.body.title, { field: 'название', max: C.titleMax });
     const heroId = req.body.hero_id ? int(req.body.hero_id, { field: 'герой', min: 1, max: 1000, required: false }) : null;
     const isDraft = bool(req.body.is_draft, false) ? 1 : 0;
-    // Coach и админ публикуют сразу, обычному игроку — после подтверждения.
+    // Сюда доходят только Coach и админы (requireStaff) — публикуют сразу.
     const moderation = moderationFor(req.user, isDraft);
 
     const info = db.prepare(`

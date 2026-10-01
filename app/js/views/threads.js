@@ -40,7 +40,7 @@
     host.appendChild(h('div.page-head', [
       h('h1', { text: 'Ветки' }),
       h('div.sub', { text: 'Сообщения о багах, идеи и обсуждения кастомов. Нашёл проблему — заведи ветку.' }),
-      h('div.btn-row', h('a.btn.btn-primary', { href: '#/threads/new', text: '＋ Создать ветку' })),
+      store.isStaff() ? h('div.btn-row', h('a.btn.btn-primary', { href: '#/threads/new', text: '＋ Создать ветку' })) : null,
     ]));
 
     if (state.author) {
@@ -96,7 +96,7 @@
         listHost.appendChild(common.empty({
           icon: '🐛', title: 'Веток не нашлось',
           text: 'Попробуй снять фильтры или создай новую — автор кастома читает ветки.',
-          action: () => router.go('/threads/new'), actionLabel: 'Создать ветку',
+          action: store.isStaff() ? () => router.go('/threads/new') : null, actionLabel: 'Создать ветку',
         }));
         return;
       }
@@ -116,6 +116,14 @@
     if (!store.me) { router.go('/login'); ui.err('Сначала войди'); return; }
     clear(host);
     const isEdit = !!params.id;
+    if (!isEdit && !store.isStaff()) {
+      host.appendChild(h('div.error-panel', [
+        h('h3', { text: 'Нет доступа' }),
+        h('p', { text: 'Ветки заводят Coach и администраторы. Обычный игрок отвечает в ветках, голосует, жалуется и подаёт заявления.' }),
+        h('div.btn-row', { style: { marginTop: '14px' } }, h('a.btn', { href: '#/threads', text: '← К списку' })),
+      ]));
+      return;
+    }
 
     const model = {
       id: null,

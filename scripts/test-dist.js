@@ -127,29 +127,48 @@ async function main() {
   const playerToken = player.data.token;
   ok(!!playerToken, 'игрок зарегистрирован');
 
-  /* ── 2. модерация в собранном приложении ─────────────────────────── */
-  const pending = await call(port, 'POST', '/api/builds', {
+  /* ── 2. права и модерация в собранном приложении ─────────────────── */
+  const denied = await call(port, 'POST', '/api/builds', {
     token: playerToken,
     body: { mode: 'chc', hero_id: antimage.id, title: 'Билд из сборки', items: [{ item_id: 1 }], skills: [], talents: [] },
   });
-  ok(pending.data.pending === true, 'билд игрока ждёт подтверждения', `moderation=${pending.data.moderation}`);
+  ok(denied.status === 403, 'игрок не может создавать билды (403)', `статус ${denied.status}`);
+
+  // игрок становится Coach — тогда пишет и публикуется сразу, видно всем
+  const grant = await call(port, 'POST', `/api/admin/users/${player.data.user.id}/role`, {
+    token: adminToken, body: { role: 'coach', coach_scopes: ['chc'] },
+  });
+  ok(grant.status === 200, 'игроку выдана роль coach', `статус ${grant.status}`);
+
+  const published = await call(port, 'POST', '/api/builds', {
+    token: playerToken,
+    body: { mode: 'chc', hero_id: antimage.id, title: 'Билд из сборки', items: [{ item_id: 1 }], skills: [], talents: [] },
+  });
+  ok(published.data.pending === false && published.data.moderation === 'approved',
+    'Coach публикует сразу', `moderation=${published.data.moderation}`);
 
   const guestList = await call(port, 'GET', '/api/builds');
-  ok(!(guestList.data.items || []).some(b => b.id === pending.data.id), 'гость билд не видит');
+  ok((guestList.data.items || []).some(b => b.id === published.data.id), 'гость видит билд сразу');
+
+  const draft = await call(port, 'POST', '/api/builds', {
+    token: playerToken,
+    body: { mode: 'chc', title: 'Черновик из сборки', is_draft: true, items: [], skills: [], talents: [] },
+  });
+  ok(draft.data.pending === true, 'черновик уходит со статусом pending');
 
   const queue = await call(port, 'GET', '/api/admin/queue?type=build', { token: adminToken });
-  ok((queue.data.items || []).some(b => b.id === pending.data.id), 'билд в очереди админа');
+  ok((queue.data.items || []).some(b => b.id === draft.data.id), 'черновик в очереди админа');
   ok(Number.isInteger(queue.data.pages), 'у очереди есть разбивка на страницы',
     `стр. ${queue.data.page} из ${queue.data.pages}`);
 
-  const approve = await call(port, 'POST', `/api/admin/queue/build/${pending.data.id}`, {
+  const approve = await call(port, 'POST', `/api/admin/queue/build/${draft.data.id}`, {
     token: adminToken, body: { decision: 'approve', note: 'Нормально' },
   });
   ok(approve.data.status === 'approved', 'админ подтвердил');
 
   const notes = await call(port, 'GET', '/api/notifications', { token: playerToken });
   ok((notes.data.items || []).some(n => /подтверждён/.test(n.title)),
-    'игроку пришло уведомление о решении',
+    'автору пришло уведомление о решении',
     (notes.data.items || [])[0] ? notes.data.items[0].title : '—');
 
   const mail = await call(port, 'GET', '/api/admin/mail-queue', { token: adminToken });
@@ -189,7 +208,7 @@ async function main() {
   ok(!!me.data.user, 'СЕССИЯ НЕ СЛОМАСЬ — тот же токен принят после перезапуска',
     me.data.user ? `${me.data.user.nickname} (id ${me.data.user.id})` : JSON.stringify(me.data));
 
-  const buildAgain = await call(port, 'GET', `/api/builds/${pending.data.id}`);
+  const buildAgain = await call(port, 'GET', `/api/builds/${published.data.id}`);
   ok(!!buildAgain.data.build, 'билд на месте после перезапуска',
     buildAgain.data.build ? buildAgain.data.build.title : '');
 

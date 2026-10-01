@@ -89,10 +89,10 @@
           ? KIND_DESC[kindMeta.key] || 'Список с тирами, отсортированный по силе.'
           : 'Персонажи, нейтралки и скиллы, отсортированные по силе. Мнение сообщества, подтверждённое Coach.',
       }),
-      h('div.btn-row', h('a.btn.btn-primary', {
+      store.isStaff() ? h('div.btn-row', h('a.btn.btn-primary', {
         href: '#/tops/new' + (state.kind ? `?kind=${state.kind}` : ''),
         text: kindMeta ? `＋ Собрать: ${kindMeta.title.toLowerCase()}` : '＋ Собрать топ',
-      })),
+      })) : null,
     ]));
 
     if (state.author) {
@@ -140,7 +140,7 @@
         listHost.appendChild(common.empty({
           icon: '🏆', title: 'Топов пока нет',
           text: 'Составь свой тир-лист: кто сильнее всех в CHC, а кто — в Ratten Run.',
-          action: () => router.go('/tops/new'), actionLabel: 'Собрать топ',
+          action: store.isStaff() ? () => router.go('/tops/new') : null, actionLabel: 'Собрать топ',
         }));
         return;
       }
@@ -319,6 +319,14 @@
     clear(host);
 
     const isEdit = !!params.id;
+    if (!isEdit && !store.isStaff()) {
+      host.appendChild(h('div.error-panel', [
+        h('h3', { text: 'Нет доступа' }),
+        h('p', { text: 'Топы составляют Coach и администраторы. Обычный игрок участвует голосами.' }),
+        h('div.btn-row', { style: { marginTop: '14px' } }, h('a.btn', { href: '#/tops', text: '← К списку' })),
+      ]));
+      return;
+    }
     // Категорию можно задать прямо в ссылке: /tops/new?kind=neutrals
     const wantedKind = query && query.kind;
     const firstKind = store.config.top_kinds[0] ? store.config.top_kinds[0].key : 'heroes';

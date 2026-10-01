@@ -14,7 +14,7 @@ const {
 const {
   str, int, oneOf, bool, bad, notFound, forbidden, nowIso, paging, timeAgo,
 } = require('../util');
-const { requireAuth, isCoachFor } = require('../auth');
+const { requireAuth, requireStaff, isCoachFor } = require('../auth');
 const { wrap } = require('../http');
 
 const STAFF = [ROLES.ADMIN, ROLES.COACH];
@@ -192,7 +192,9 @@ module.exports = function threadRoutes(ctx) {
   }));
 
   // ── создать ветку ────────────────────────────────────────────────────
-  router.post('/', requireAuth, wrap((req, res) => {
+  // Темы заводят только Coach и администраторы; ответы, голоса и жалобы
+  // остаются доступны всем вошедшим.
+  router.post('/', requireStaff, wrap((req, res) => {
     const mode = oneOf(req.body.mode, [...MODE_KEYS, 'any'], { field: 'режим' });
     const category = oneOf(req.body.category, THREAD_CATEGORY_KEYS, { field: 'категория' });
     const title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });

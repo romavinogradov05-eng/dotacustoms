@@ -122,8 +122,8 @@ async function main() {
   const ADMIN = 'adm' + SUF;
   const PLAYER = 'ply' + SUF;
   const T1 = 'Билд админа ' + SUF;      // публикуется сразу
-  const T2 = 'Билд игрока ' + SUF;     // ждёт подтверждения
-  const TOP = 'Топ игрока ' + SUF;     // тоже ждёт
+  const T2 = 'Второй билд админа ' + SUF; // тоже сразу: пишет только редакция
+  const TOP = 'Топ админа ' + SUF;        // игрокам создание закрыто
 
   /* ══ сессия 1: оба пользователя создают контент ══ */
   launch(profile);
@@ -148,7 +148,15 @@ async function main() {
     }});
     out.buildAdmin = { ok: r.ok, id: r.data && r.data.id, moderation: r.data && r.data.moderation };
 
-    // 2. Обычный игрок: его контент должен ждать
+    // 1b. Админ пишет и второй билд: создавать контент могут только
+    // Coach и админы, всё опубликованное видно всем сразу.
+    r = await api.post('/builds', { body: {
+      mode: 'chc', hero_id: h.id, title: '${T2}', stage: 'any',
+      items: [{ item_id: 2 }], skills: [], talents: [],
+    }});
+    out.buildAdmin2 = { ok: r.ok, id: r.data && r.data.id, moderation: r.data && r.data.moderation };
+
+    // 2. Обычный игрок: создавать билды и топы ему закрыто (403)
     r = await api.post('/auth/register', { body: {
       username: '${PLAYER}', nickname: 'Игрок', password: 'secret123' } });
     if (!r.ok) return { fail: 'регистрация игрока: ' + (r.data && r.data.error) };
@@ -157,12 +165,22 @@ async function main() {
     out.playerRole = store.me.role;
 
     r = await api.post('/builds', { body: {
-      mode: 'chc', hero_id: h.id, title: '${T2}', stage: 'any',
+      mode: 'chc', hero_id: h.id, title: '${T2} от игрока', stage: 'any',
       items: [{ item_id: 2 }], skills: [], talents: [],
     }});
-    out.buildPlayer = { ok: r.ok, id: r.data && r.data.id, moderation: r.data && r.data.moderation };
+    out.buildPlayer = { ok: r.ok, forbidden: !r.ok };
 
     const refs = store.heroes.slice(0, 5).map(x => x.id);
+    r = await api.post('/tops', { body: {
+      mode: 'chc', kind: 'heroes', title: '${TOP}',
+      entries: refs.map((ref_id, i) => ({ ref_id, rank: i + 1, tier: ['S', 'S', 'A', 'B', ''][i] })),
+    }});
+    out.topPlayer = { ok: r.ok, forbidden: !r.ok };
+    // топ пишет админ: игрокам создание закрыто
+    r = await api.post('/auth/login', { body: {
+      username: '${ADMIN}', nickname: 'Админ', password: 'secret123' } });
+    api.setToken(r.data.token);
+    await store.restoreSession();
     r = await api.post('/tops', { body: {
       mode: 'chc', kind: 'heroes', title: '${TOP}',
       entries: refs.map((ref_id, i) => ({ ref_id, rank: i + 1, tier: ['S', 'S', 'A', 'B', ''][i] })),
@@ -196,10 +214,14 @@ async function main() {
   ok(setup.playerRole === 'user', 'второй — обычный игрок', setup.playerRole);
   ok(setup.buildAdmin.ok && setup.buildAdmin.moderation === 'approved',
     'билд админа ушёл сразу', setup.buildAdmin.moderation);
-  ok(setup.buildPlayer.ok && setup.buildPlayer.moderation === 'pending',
-    'билд игрока ждёт подтверждения', setup.buildPlayer.moderation);
-  ok(setup.top.ok && setup.top.moderation === 'pending',
-    'топ игрока ждёт подтверждения', setup.top.moderation);
+  ok(setup.buildAdmin2.ok && setup.buildAdmin2.moderation === 'approved',
+    'второй билд админа тоже сразу', setup.buildAdmin2.moderation);
+  ok(!setup.buildPlayer.ok && setup.buildPlayer.forbidden,
+    'игрок не может создавать билды (403)');
+  ok(!setup.topPlayer.ok && setup.topPlayer.forbidden,
+    'игрок не может создавать топы (403)');
+  ok(setup.top.ok && setup.top.moderation === 'approved',
+    'топ админа ушёл сразу', setup.top.moderation);
   ok(setup.buildNoHero.ok && setup.buildNoHero.hero == null,
     'билд без героя сохраняется — герой не обязателен',
     setup.buildNoHero.err || ('id ' + setup.buildNoHero.id + ', hero_id ' + setup.buildNoHero.hero))
@@ -223,8 +245,8 @@ async function main() {
   }));
   ok(disk1.b1.length === 1 && disk1.b1[0].moderation === 'approved',
     'БИЛД АДМИНА В ФАЙЛЕ', disk1.b1.length ? 'id ' + disk1.b1[0].id + ', ' + disk1.b1[0].moderation : 'НЕ НАЙДЕН');
-  ok(disk1.b2.length === 1 && disk1.b2[0].moderation === 'pending',
-    'БИЛД ИГРОКА В ФАЙЛЕ, ждёт', disk1.b2.length ? 'id ' + disk1.b2[0].id + ', ' + disk1.b2[0].moderation : 'НЕ НАЙДЕН');
+  ok(disk1.b2.length === 1 && disk1.b2[0].moderation === 'approved',
+    'ВТОРОЙ БИЛД В ФАЙЛЕ, опубликован', disk1.b2.length ? 'id ' + disk1.b2[0].id + ', ' + disk1.b2[0].moderation : 'НЕ НАЙДЕН');
   ok(disk1.top.length === 1, 'ТОП В ФАЙЛЕ', disk1.top.length ? 'id ' + disk1.top[0].id : 'НЕ НАЙДЕН');
   // Жалоба была «персонажи в создании билдов не должны быть + не
   // сохраняешь бд» — проверяем обе половины: hero_id обязан лежать в
@@ -256,10 +278,11 @@ async function main() {
     const guestIds = (guestList.data && guestList.data.items || []).map(x => x.id);
     return {
       adminVisible: guestIds.includes(${setup.buildAdmin.id}),
-      playerVisible: guestIds.includes(${setup.buildPlayer.id}),
+      secondVisible: guestIds.includes(${setup.buildAdmin2.id}),
     };
   })()`);
   ok(session.adminVisible, 'после перезапуска гость видит подтверждённый билд');
+  ok(session.secondVisible, 'гость видит и второй билд — всё опубликованное видно всем');
 
   const after2 = await evaluate(cdp, `(async () => {
     const cfg = await api.get('/config');
@@ -279,33 +302,18 @@ async function main() {
   ok(after2.hero > 0 && !!after2.heroName,
     'герой билда виден после перезапуска',
     after2.hero + ' = ' + after2.heroName);
-  ok(!session.playerVisible, 'неподтверждённый билд гостю не показан — как и задумано');
-
-  // Автор видит свой неподтверждённый билд — иначе «пропал»
+  // Игрок видит всё опубликованное — создавать ему закрыто, смотреть открыто
   const author = await evaluate(cdp, `(async () => {
     const r = await api.post('/auth/login', { body: { username: '${PLAYER}', password: 'secret123' } });
     api.setToken(r.data.token);
     await store.restoreSession();
-    const b = await api.get('/builds/${setup.buildPlayer.id}');
-    return { status: b.status, title: b.data && b.data.build && b.data.build.title,
-             moderation: b.data && b.data.build && b.data.build.moderation };
-  })()`);
-  ok(author.status === 200, 'автор видит свой ждущий билд', 'HTTP ' + author.status);
-  ok(author.title === T2, 'название сохранилось', String(author.title));
-  ok(author.moderation === 'pending', 'и понимает, что он ждёт подтверждения', author.moderation);
-
-  // Админ подтверждает — и билд появляется у всех
-  const after = await evaluate(cdp, `(async () => {
-    const l = await api.post('/auth/login', { body: { username: '${ADMIN}', password: 'secret123' } });
-    api.setToken(l.data.token);
-    const a = await api.post('/admin/queue/build/${setup.buildPlayer.id}', { body: { decision: 'approve' } });
-    api.setToken(null);
     const list = await api.get('/builds');
-    return { approved: a.data && a.data.status,
-             visible: (list.data && list.data.items || []).map(x => x.id).includes(${setup.buildPlayer.id}) };
+    const ids = (list.data && list.data.items || []).map(x => x.id);
+    const w = await api.post('/builds', { body: { mode: 'chc', title: 'Не положено', items: [] } });
+    return { seesT2: ids.includes(${setup.buildAdmin2.id}), createStatus: w.status };
   })()`);
-  ok(after.approved === 'approved', 'админ подтвердил билд игрока', after.approved);
-  ok(after.visible, 'после подтверждения билд видно гостю');
+  ok(author.seesT2, 'игрок видит опубликованный билд после перезапуска');
+  ok(author.createStatus === 403, 'игрок по-прежнему не может создавать (403)', 'HTTP ' + author.createStatus);
 
   // Правка поверх
   await evaluate(cdp, `(async () => {
@@ -322,7 +330,7 @@ async function main() {
 
   const disk2 = query(dbFile, db => ({
     b1: db.all('select id, title, moderation from builds where id = ?', [setup.buildAdmin.id]),
-    b2: db.all('select id, title, moderation from builds where id = ?', [setup.buildPlayer.id]),
+    b2: db.all('select id, title, moderation from builds where id = ?', [setup.buildAdmin2.id]),
     counts: {
       users: db.get('select count(*) c from users').c,
       builds: db.get('select count(*) c from builds').c,
@@ -336,13 +344,14 @@ async function main() {
   ok(disk2.b1.length && disk2.b1[0].title === T1 + ' v2',
     'правка дошла до файла', disk2.b1.length ? disk2.b1[0].title : 'НЕ НАЙДЕН');
   ok(disk2.b2.length && disk2.b2[0].moderation === 'approved',
-    'подтверждение админа записано', disk2.b2.length ? disk2.b2[0].moderation : '');
+    'второй билд в файле, сразу опубликован', disk2.b2.length ? disk2.b2[0].moderation : '');
 
   say('  содержимое базы: ' + JSON.stringify(disk2.counts));
   ok(disk2.counts.users === 2 && disk2.counts.builds === 3 && disk2.counts.tops === 1
     && disk2.counts.entries === 5 && disk2.counts.guides >= 7,
     'все сущности на месте');
-  ok(disk2.counts.notifications >= 2, 'уведомления записаны', disk2.counts.notifications + ' шт.');
+  ok(Number.isInteger(disk2.counts.notifications), 'таблица уведомлений на месте',
+    disk2.counts.notifications + ' шт.');
 
   try { fs.rmSync(profile, { recursive: true, force: true }); } catch { /* ок */ }
 

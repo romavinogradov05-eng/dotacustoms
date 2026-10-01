@@ -11,7 +11,7 @@ const { LIMITS, ROLES } = require('../config');
 const {
   str, bool, bad, notFound, forbidden, nowIso, slugify, timeAgo,
 } = require('../util');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireStaff } = require('../auth');
 const { wrap } = require('../http');
 
 function guidePayload(db, g, viewer, full = false) {
@@ -59,8 +59,9 @@ module.exports = function guideRoutes(ctx) {
     res.json({ guide: guidePayload(db, g, req.user, true) });
   }));
 
-  // ── создать свой гайд ────────────────────────────────────────────────
-  router.post('/', requireAuth, wrap((req, res) => {
+  // ── создать гайд ─────────────────────────────────────────────────────
+  // Гайды пишут только Coach и администраторы.
+  router.post('/', requireStaff, wrap((req, res) => {
     const title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });
     const body = str(req.body.body, { field: 'текст гайда', min: 20, max: LIMITS.bodyMax });
     let slug = slugify(req.body.slug || title);

@@ -24,7 +24,7 @@
     host.appendChild(h('div.page-head', [
       h('h1', { text: 'Обучение' }),
       h('div.sub', { text: 'Короткие руководства для новичков и разборы от Coach. Начни с «Старт».', }),
-      h('div.btn-row', h('a.btn.btn-primary', { href: '#/guides/new', text: '＋ Написать гайд' })),
+      store.isStaff() ? h('div.btn-row', h('a.btn.btn-primary', { href: '#/guides/new', text: '＋ Написать гайд' })) : null,
     ]));
 
     const tabs = h('div.tabs');
@@ -57,7 +57,7 @@
       listHost.appendChild(common.empty({
         icon: '📘', title: 'В этой теме пусто',
         text: 'Напиши первый гайд — твой опыт может помочь другим.',
-        action: () => router.go('/guides/new'), actionLabel: 'Написать гайд',
+        action: store.isStaff() ? () => router.go('/guides/new') : null, actionLabel: 'Написать гайд',
       }));
       return;
     }
@@ -178,6 +178,14 @@
     clear(host);
 
     const isEdit = !!params.slug;
+    if (!isEdit && !store.isStaff()) {
+      host.appendChild(h('div.error-panel', [
+        h('h3', { text: 'Нет доступа' }),
+        h('p', { text: 'Гайды пишут Coach и администраторы.' }),
+        h('div.btn-row', { style: { marginTop: '14px' } }, h('a.btn', { href: '#/guides', text: '← К списку' })),
+      ]));
+      return;
+    }
     let model = {
       slug: null, title: '', summary: '', body: '',
       category: 'basics', published: true,

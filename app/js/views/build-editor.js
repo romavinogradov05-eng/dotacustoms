@@ -43,6 +43,17 @@
     clear(host);
     const isEdit = !!params.id;
 
+    // Создавать билды могут только Coach и администраторы. Свою старую
+    // сборку автор правит как раньше — это проверяет сервер по can_edit.
+    if (!isEdit && !store.isStaff()) {
+      host.appendChild(h('div.error-panel', [
+        h('h3', { text: 'Нет доступа' }),
+        h('p', { text: 'Билды создают Coach и администраторы. Обычный игрок участвует голосами, комментариями, жалобами и заявлениями.' }),
+        h('div.btn-row', { style: { marginTop: '14px' } }, h('a.btn', { href: '#/builds', text: '← К списку' })),
+      ]));
+      return;
+    }
+
     /* ── исходные данные ── */
     let model = blank();
     let original = null;

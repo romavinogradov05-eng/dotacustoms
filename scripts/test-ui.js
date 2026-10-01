@@ -949,7 +949,8 @@ async function main() {
   await check('экран объясняет модерацию', async () => {
     const host = await renderRoute('/create');
     const text = host.textContent;
-    assert(/подтвержден/.test(text), 'не сказано про подтверждение админом');
+    assert(/Coach и администраторы/.test(text), 'не сказано, кто может создавать');
+    assert(/видно всем сразу/.test(text), 'не сказано, что опубликованное видно всем');
     assert(/уведомлени/.test(text), 'не сказано про уведомления');
     return 'правило объяснено';
   });
@@ -1322,6 +1323,35 @@ async function main() {
     const btn = [...row.querySelectorAll('button')].find(b => /Выбрать/.test(b.textContent));
     assert(btn, 'в строке героя нет кнопки выбора');
     return 'одна строка, герой можно не задавать';
+  });
+
+  await check('игрок не может открывать редакторы создания', async () => {
+    // свежий обычный игрок: создавать контент могут только Coach и админы
+    const reg = await (await fetch(API + '/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'denied' + username.slice(-6), password: 'smoketest1', nickname: 'БезПрав' }),
+    })).json();
+    assert(reg && reg.token, 'регистрация: ' + JSON.stringify(reg));
+    const savedToken = sandbox.api.getToken();
+    const savedMe = sandbox.store.me;
+    sandbox.api.setToken(reg.token);
+    sandbox.store.setMe({ user: reg.user });
+    try {
+      for (const route of ['/builds/new', '/tops/new', '/threads/new', '/guides/new']) {
+        const host = await renderRoute(route, { allowPanel: true });
+        assert(host.textContent.includes('Нет доступа'),
+          `${route}: нет отказа, текст: ` + host.textContent.slice(0, 120));
+      }
+      // на экране «Создать» игроку доступна только заявка
+      const create = await renderRoute('/create');
+      const cards = [...create.querySelectorAll('.create-card')];
+      assert(cards.length === 1 && create.textContent.includes('Заявление'),
+        `плиток ${cards.length}, ожидалась одна «Заявление»`);
+    } finally {
+      sandbox.api.setToken(savedToken);
+      sandbox.store.setMe(savedMe ? { user: savedMe } : null);
+    }
+    return 'четыре отказа + только заявка';
   });
 
   await check('в выборе героя есть настройка ростера', async () => {
