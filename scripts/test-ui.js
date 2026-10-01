@@ -851,16 +851,33 @@ async function main() {
     return shown;
   });
 
-  await check('в редакторе есть пул способностей CHC: герой первым', async () => {
+  await check('пул CHC доступен и без героя', async () => {
     const hero = sandbox.store.heroes.find(h => h.key === 'antimage');
     assert(hero, 'Антимаг не найден');
+    const pool = sandbox.store.abilities.filter(a => !a.is_talent && a.hero && a.playable).slice(0, 5);
     const host = await renderRoute('/builds/new');
-    const text = host.textContent;
-    assert(text.includes('Сначала выбери героя'),
-      'нет подсказки «сначала выбери героя»');
-    assert(text.includes('до 20'), 'не написано про лимит 20 скиллов');
 
-    // выбираем героя (клик по кнопке в строке героя) → появляется выбор скиллов
+    // без героя: вкладки на месте, пул активен, запрета нет
+    const text = host.textContent;
+    assert(text.includes('Пул CHC'), 'нет переключателя «Пул CHC»');
+    assert(text.includes('Способности героя'), 'нет вкладки «Способности героя»');
+    assert(!text.includes('Сначала выбери героя выше — потом добавь'),
+      'вернулась заглушка «сначала герой»');
+
+    // скилл из пула выбирается без героя
+    const origAbility = sandbox.picker.pickAbility;
+    sandbox.picker.pickAbility = ({ onPick }) => onPick(pool[0]);
+    try {
+      const addBtn = [...host.querySelectorAll('button')].find(b => b.textContent.trim() === '＋ выбрать способность');
+      assert(addBtn, 'нет кнопки выбора способности');
+      addBtn.click();
+    } finally {
+      sandbox.picker.pickAbility = origAbility;
+    }
+    assert(host.querySelectorAll('.talent-row.chosen').length === 1,
+      'скилл без героя не выбрался');
+
+    // выбираем героя — открывается его вкладка и кнопка «Скиллы»
     const origHero = sandbox.picker.pickHero;
     sandbox.picker.pickHero = ({ onPick }) => onPick({ id: hero.id });
     try {
@@ -871,12 +888,10 @@ async function main() {
       sandbox.picker.pickHero = origHero;
     }
     const text2 = host.textContent;
-    assert(text2.includes('Пул CHC'), 'нет переключателя «Пул CHC»');
-    assert(text2.includes('Способности героя'), 'нет вкладки «Способности героя»');
     assert(text2.includes('⛭ Скиллы'), 'нет кнопки «Скиллы» у героя');
     assert(!text2.includes('Сначала выбери героя — тогда появится список его способностей'),
       'осталась старая заглушка про выбор героя');
-    return 'герой первым — клик по герою открывает пул скиллов (до 20)';
+    return 'пул без героя + герой открывает свои скиллы (до 20)';
   });
 
   await check('в редакторе можно выбрать до 20 скиллов', async () => {

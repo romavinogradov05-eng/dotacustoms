@@ -49,6 +49,11 @@
 .icon { width: 32px; height: 32px; flex: none; object-fit: contain; }
 /* Круглые — аватары героев: img.icon.round. */
 img.icon.round { border-radius: 50%; object-fit: cover; }
+/* Фиксированное окно иконки: svg/img занимают весь бокс, содержимое
+   вписывается целиком (meet) — иконки разных пропорций (широкие предметы
+   Dota и квадратные кастомные) выглядят одинаково, а не пляшут по высоте. */
+.fi { display: inline-block; overflow: hidden; flex: none; }
+.fi > svg.icon, .fi > img.icon { width: 100%; height: 100%; display: block; }
 /* Иконка в развёрнутой карточке предмета/умения (picker.showCard) */
 .card-icon { width: 96px; height: 96px; flex: none; object-fit: contain; }
 

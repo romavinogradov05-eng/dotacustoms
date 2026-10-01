@@ -99,7 +99,7 @@
       h('div', [
         h('h1', { text: isEdit ? 'Правка билда' : 'Новый билд' }),
         h('div.sub', {
-          text: 'Выбери героя, накидай предметы, прокачку, таланты и нейтралки. Черновик видят только ты и модерация.',
+          text: 'Накидай предметы, скиллы из пула CHC, таланты и нейтралки. Герой необязателен. Черновик видишь только ты.',
         }),
       ]),
       h('div.btn-row', [
@@ -280,8 +280,9 @@
     }
     drawItems();
 
-    /* скиллы: герой первым — кликаешь по герою и выбираешь способности
-       из пула CHC (любые герои: герой тут статовая оболочка), до 20 штук */
+    /* скиллы: герой необязателен — без героя доступен пул CHC (любые
+       способности Dota, герой тут статовая оболочка), до 20 штук.
+       Выбрал героя — добавляются его способности и выбор кликом по герою. */
     const skillsHost = h('div');
     let skillScope = 'pool'; // 'hero' — способности выбранного героя, 'pool' — весь пул CHC
     function heroSel() { return model.hero_id ? store.heroById.get(Number(model.hero_id)) : null; }
@@ -302,21 +303,22 @@
     function drawSkills() {
       clear(skillsHost);
       const hero = heroSel();
-      if (!hero) {
-        skillsHost.appendChild(h('div.help-note', {
-          text: 'Сначала выбери героя выше — потом добавь ему скиллы из пула CHC. Кликни по герою или нажми «⛭ Скиллы». Можно до 20.',
-        }));
-        return;
-      }
+      if (skillScope === 'hero' && !hero) skillScope = 'pool';
 
       const tabs = h('div.tabs');
       for (const [key, label] of [['hero', 'Способности героя'], ['pool', 'Пул CHC — любая способность']]) {
         tabs.appendChild(h(`button.tab${skillScope === key ? '.active' : ''}`, {
-          type: 'button', text: label,
+          type: 'button', text: label, disabled: key === 'hero' && !hero,
+          title: key === 'hero' && !hero ? 'Сначала выбери героя выше' : '',
           onclick: () => { skillScope = key; drawSkills(); },
         }));
       }
       skillsHost.appendChild(tabs);
+      if (!hero) {
+        skillsHost.appendChild(h('div.help-note', {
+          text: 'Герой не выбран — берём из пула CHC (до ' + MAX_SKILLS() + '). Выбери героя выше, чтобы открыть его способности и выбор кликом по герою.',
+        }));
+      }
 
       const table = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '7px' } });
       const chosen = new Set(model.skills.map(s => s.ability_id));
@@ -375,7 +377,8 @@
       if (model.skills.length < MAX_SKILLS()) {
         skillsHost.appendChild(h('div.field-hint', {
           text: skillScope === 'pool'
-            ? 'Пул CHC — любые способности Dota из справочника, до ' + MAX_SKILLS() + '. У каждой работают свои Аганим/Шард-улучшения. Кликни по герою, чтобы выбрать ещё.'
+            ? 'Пул CHC — любые способности Dota из справочника, до ' + MAX_SKILLS() + '. У каждой работают свои Аганим/Шард-улучшения.'
+              + (hero ? ' Кликни по герою, чтобы выбрать ещё.' : '')
             : `Раскладка: ${model.skills.length} из ${MAX_SKILLS()}. Поставь способности в том порядке, в котором качаешь.`,
         }));
       }
@@ -530,18 +533,11 @@
       oninput: e => { model.patch = e.target.value; },
     });
 
-    const draftTrack = h('input', { type: 'checkbox' });
-    draftTrack.checked = model.is_draft;
-    draftTrack.addEventListener('change', () => { model.is_draft = draftTrack.checked; });
-    const draftSwitch = h('label.switch', [
-      draftTrack, h('span.track'), h('span.label', { text: 'Черновик' }),
-    ]);
-
     side.appendChild(h('div.panel', [
       h('div.panel-title', { text: 'Публикация' }),
       h('div.field', [h('label', { text: 'Патч' }), patchInput]),
-      h('div.field', [draftSwitch,
-        h('div.field-hint', { text: 'Черновик виден только тебе и модерации. Сними галочку, чтобы билд увидели все.' })]),
+      h('div.field', [common.draftToggle(() => model.is_draft, v => { model.is_draft = v; }),
+        h('div.field-hint', { text: 'Черновик виден только тебе. Нажми кнопку, чтобы опубликовать для всех.' })]),
       h('div.btn-row', [
         h('button.btn.btn-primary.btn-block', { type: 'button', text: '💾 Сохранить', onclick: () => save(false) }),
         h('button.btn.btn-block', { type: 'button', text: '💾 Сохранить и открыть', onclick: () => save(true) }),

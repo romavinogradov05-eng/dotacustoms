@@ -524,9 +524,6 @@
       statsHost,
     ]));
 
-    const draftTrack = h('input', { type: 'checkbox' });
-    draftTrack.checked = model.is_draft;
-    draftTrack.addEventListener('change', () => { model.is_draft = draftTrack.checked; });
     const patchInput = h('input.input', {
       type: 'text', maxlength: 12, value: model.patch, placeholder: '7.41',
       oninput: e => { model.patch = e.target.value; },
@@ -535,8 +532,8 @@
     side.appendChild(h('div.panel', [
       h('div.panel-title', { text: 'Публикация' }),
       h('div.field', [h('label', { text: 'Патч' }), patchInput]),
-      h('div.field', [h('label.switch', [draftTrack, h('span.track'), h('span.label', { text: 'Черновик' })]),
-        h('div.field-hint', { text: 'Сними галочку, чтобы топ увидели все.' })]),
+      h('div.field', [common.draftToggle(() => model.is_draft, v => { model.is_draft = v; }),
+        h('div.field-hint', { text: 'Черновик виден только тебе. Нажми кнопку, чтобы опубликовать для всех.' })]),
       h('button.btn.btn-primary.btn-block', { type: 'button', text: '💾 Сохранить', onclick: save }),
       isEdit ? h('button.btn.btn-danger.btn-block', {
         type: 'button', text: 'Удалить топ', style: { marginTop: '10px' }, onclick: () => deleteTop(model, () => router.go('/tops')),

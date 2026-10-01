@@ -52,19 +52,20 @@
     return h('span.badge.badge-yellow', { text: 'Черновик' });
   }
 
-  /** Компактный ряд иконок предметов. */
+  /** Компактный ряд иконок предметов. Рамка фиксированная (класс fi),
+      поэтому иконки разных пропорций выглядят одинаково. */
   function itemStrip(ids, kind, max) {
     const list = (ids || []).slice(0, max || 8);
-    const strip = h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap' } });
+    const strip = h('div', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' } });
     for (const id of list) {
       // anyItemById, а не itemById: кастомные предметы CHC лежат отдельно
       const entry = kind === 'neutral'
         ? store.neutralById.get(id)
         : store.anyItemById(id);
       if (!entry) continue;
-      strip.appendChild(h('span', {
+      strip.appendChild(h('span.fi', {
         title: picker.displayName(entry),
-        style: { width: '34px', height: '26px', display: 'inline-block' },
+        style: { width: '34px', height: '26px' },
       }, ui.dotaIcon(store.icon(entry.img))));
     }
     return strip;
@@ -236,7 +237,7 @@
           : t.kind === 'neutrals' ? store.neutralById.get(e.ref_id)
             : store.abilityById.get(e.ref_id);
         if (!ref) continue;
-        preview.appendChild(h('span', {
+        preview.appendChild(h('span.fi', {
           title: picker.displayName(ref),
           style: { width: t.kind === 'heroes' ? '26px' : '32px', height: '24px', display: 'inline-block' },
         }, t.kind === 'heroes'
@@ -340,8 +341,25 @@
     return draw;
   }
 
+  /** Крупный переключатель «черновик / опубликован» вместо мелкого свитча:
+      текущее состояние написано словами, мимо попасть сложно. */
+  function draftToggle(get, set) {
+    const btn = h('button.btn.btn-block', { type: 'button' });
+    const paint = () => {
+      const draft = !!get();
+      btn.className = 'btn btn-block' + (draft ? '' : ' btn-primary');
+      btn.textContent = draft ? '📝 Черновик — видишь только ты' : '🌍 Опубликован — видят все';
+      btn.title = draft
+        ? 'Нажми, чтобы опубликовать: после сохранения увидят все'
+        : 'Нажми, чтобы вернуть в черновики';
+    };
+    btn.addEventListener('click', () => { set(!get()); paint(); });
+    paint();
+    return btn;
+  }
+
   window.common = {
-    modeBadge, byline, verifyBadge, draftBadge, itemStrip,
+    modeBadge, byline, verifyBadge, draftBadge, draftToggle, itemStrip,
     modeTabs, pager, empty, voteBox, flagButton, FLAG_REASONS,
     buildCard, topCard, threadCard, selectField, inputField, listSection, TOP_KIND_RU,
   };
