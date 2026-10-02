@@ -11,20 +11,27 @@
    ══════════════════════════════════════════════════════════════════════ */
 'use strict';
 
+const express = require('express');
 const { createBackend } = require('../backend');
 
 if (!process.env.DATABASE_URL) {
   // На Vercel backend обязан работать на Postgres (Neon): файловой SQLite
-  // там нет — файловая система функции эфемерная. Без явной строки
-  // подключения деплой не имеет смысла: падаем сразу и с понятным текстом.
-  throw new Error(
-    '[dotacustoms] Vercel: не задан DATABASE_URL (Neon Postgres). ' +
-    'Создай проект в Neon, скопируй строку подключения и добавь её в переменные окружения проекта.',
-  );
+  // там нет — файловая система функции эфемерная. Не бросаем исключение
+  // на уровне модуля (Vercel отдал бы голый FUNCTION_INVOCATION_FAILED),
+  // а отвечаем понятным JSON на каждый запрос — пока строка подключения
+  // не появится, фронт увидит ровно то, что случилось.
+  const noDb = express();
+  noDb.use((_req, res) => {
+    res.status(503).json({
+      error: {
+        message: 'База данных не подключена. На Vercel нужен Postgres (Neon): задай DATABASE_URL в переменных окружения проекта и передеплой.',
+      },
+    });
+  });
+  module.exports = noDb;
+} else {
+  const backend = createBackend();
+  // Экспресс в виртуальном окружении Vercel сам отвечает за статику и
+  // SPA-fallback — здесь они бесполезны (их раздаёт Vercel), но не мешают.
+  module.exports = backend.app;
 }
-
-const backend = createBackend();
-
-// Экспресс в виртуальном окружении Vercel сам отвечает за статику и
-// SPA-fallback — здесь они бесполезны (их раздаёт Vercel), но не мешают.
-module.exports = backend.app;
