@@ -531,6 +531,9 @@ function openSqliteLocal(dataDir) {
 
   let db;
   try {
+    // Ленивый require: на Vercel (PG-ветка) node-sqlite3-wasm не нужен
+    // вовсе, и его bundled .wasm не должен попадать в бандл функции.
+    const { open: openSqlite } = require('./sqlite');
     db = openSqlite(file);
     // busy_timeout ставим первым: пока база занята (например, уже открыто
     // второе окно приложения) SQLite ждёт, а не падает с «database is locked».

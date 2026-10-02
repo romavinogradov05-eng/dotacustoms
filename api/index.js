@@ -12,7 +12,6 @@
 'use strict';
 
 const express = require('express');
-const { createBackend } = require('../backend');
 
 if (!process.env.DATABASE_URL) {
   // На Vercel backend обязан работать на Postgres (Neon): файловой SQLite
@@ -30,6 +29,9 @@ if (!process.env.DATABASE_URL) {
   });
   module.exports = noDb;
 } else {
+  // Ленивый require: тянем весь backend (и место с ним пул драйверов)
+  // только когда база реально есть.
+  const { createBackend } = require('../backend');
   const backend = createBackend();
   // Экспресс в виртуальном окружении Vercel сам отвечает за статику и
   // SPA-fallback — здесь они бесполезны (их раздаёт Vercel), но не мешают.
