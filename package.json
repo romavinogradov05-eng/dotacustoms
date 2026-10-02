@@ -17,6 +17,8 @@
     "icon": "node scripts/make-icon.js",
     "data:seed": "node scripts/seed-guides.js",
     "db:reset": "node scripts/reset-db.js",
+    "db:migrate": "node scripts/migrate-sqlite-to-pg.js",
+    "smoke:pg": "node scripts/smoke-pg-bridge.js 1",
     "test": "node scripts/test.js && node scripts/test-session.js && node scripts/check-renderer.js && node scripts/test-ui.js",
     "test:api": "node scripts/test.js",
     "test:session": "node scripts/test-session.js",
@@ -32,7 +34,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.22.1",
-    "node-sqlite3-wasm": "^0.8.60"
+    "node-sqlite3-wasm": "^0.8.60",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "electron": "^32.0.0",

@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/images/(.*)", "destination": "/app/images/$1" },
+    { "source": "/fonts/(.*)", "destination": "/app/fonts/$1" },
+    { "source": "/js/(.*)", "destination": "/app/js/$1" },
+    { "source": "/style.css", "destination": "/app/style.css" },
+    { "source": "/icon.png", "destination": "/app/icon.png" },
+    { "source": "/", "destination": "/app/index.html" },
+    { "source": "/((?!api/|images/|fonts/|js/|style\\.css|icon\\.png).*)", "destination": "/app/index.html" }
+  ]
+}

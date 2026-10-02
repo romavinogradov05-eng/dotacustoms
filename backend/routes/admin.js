@@ -34,13 +34,17 @@ module.exports = function adminRoutes(ctx) {
 
   // ── обзор ────────────────────────────────────────────────────────────
   router.get('/overview', wrap((_req, res) => {
-    const one = sql => db.prepare(sql).get().c;
+    const one = (sql, ...p) => db.prepare(sql).get(...p).c;
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    // Поиск «coach» в био: в SQLite like уже нечувствителен к регистру,
+    // в Postgres нужен ilike — иначе «Coach» не найдётся.
+    const likes = db.dialect === 'pg' ? 'ilike' : 'like';
     res.json({
       users: {
         total: one('select count(*) as c from users'),
         banned: one('select count(*) as c from users where is_banned = 1'),
         coaches: one("select count(*) as c from users where role = 'coach'"),
-        new_7d: one("select count(*) as c from users where created_at >= datetime('now','-7 days')"),
+        new_7d: one('select count(*) as c from users where created_at >= ?', weekAgo),
       },
       content: {
         builds: one('select count(*) as c from builds'),
@@ -57,7 +61,7 @@ module.exports = function adminRoutes(ctx) {
         threads_open: one("select count(*) as c from threads where is_deleted = 0 and status = 'open'"),
         threads_confirmed: one("select count(*) as c from threads where is_deleted = 0 and status = 'confirmed'"),
         builds_unverified: one('select count(*) as c from builds where is_draft = 0 and verified_at is null'),
-        coach_applications: one("select count(*) as c from users where role = 'user' and bio like '%coach%'"),
+        coach_applications: one(`select count(*) as c from users where role = 'user' and bio ${likes} '%coach%'`),
       },
     });
   }));

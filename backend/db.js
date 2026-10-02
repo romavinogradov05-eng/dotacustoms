@@ -357,6 +357,12 @@ const MIGRATIONS = [
 /** Колонки, которые уже есть — чтобы ALTER не падал на повторном запуске. */
 function columnsOf(db, table) {
   try {
+    if (db.dialect === 'pg') {
+      return new Set(
+        db.all('select column_name as name from information_schema.columns where table_name = ?', table)
+          .map(r => r.name),
+      );
+    }
     return new Set(db.all(`pragma table_info(${table})`).map(r => r.name));
   } catch {
     return new Set();
@@ -400,7 +406,7 @@ function applyMigrations(db, dataDir, file) {
     const already = db.get('select id from migrations where name = ?', m.name);
     if (already) continue;
 
-    if (!backedUp) {
+    if (!backedUp && dataDir && file) {
       try {
         db.run('pragma wal_checkpoint(TRUNCATE)');
       } catch { /* checkpoint не критичен для копии */ }
@@ -428,7 +434,14 @@ function applyMigrations(db, dataDir, file) {
       }
     }
 
-    db.run('insert into migrations (name, applied_at) values (?,?)', m.name, nowIso());
+    try {
+      db.run('insert into migrations (name, applied_at) values (?,?)', m.name, nowIso());
+    } catch (err) {
+      // Serverless: миграцию мог применить параллельный инстанс между нашей
+      // проверкой и вставкой — unique-конфликт тогда не ошибка.
+      const still = db.get('select id from migrations where name = ?', m.name);
+      if (!still) throw err;
+    }
     done++;
     console.log(`[dotacustoms] миграция применена: ${m.name}`);
   }
@@ -494,6 +507,22 @@ function processAlive(pid) {
 }
 
 function openDatabase(dataDir = defaultDataDir()) {
+  if (process.env.DATABASE_URL) return openPgRemote();
+  return openSqliteLocal(dataDir);
+}
+
+/** PostgreSQL-ветка: та же схема и миграции, но без файлов и прагм. */
+function openPgRemote() {
+  const { open } = require('./pg');
+  const { SCHEMA_PG } = require('./schema-pg');
+  const db = open();
+  db.exec(SCHEMA_PG);
+  applyMigrations(db, null, null);
+  seedModes(db);
+  return db;
+}
+
+function openSqliteLocal(dataDir) {
   ensureDir(dataDir);
   const file = path.join(dataDir, 'dotacustoms.db');
 

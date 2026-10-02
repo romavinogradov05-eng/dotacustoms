@@ -46,9 +46,11 @@ function rosterSummaries(db, dataset) {
   return out;
 }
 function createBackend(opts = {}) {
-  const dataDir = ensureDir(opts.dataDir || defaultDataDir());
+  const isCloud = !!process.env.DATABASE_URL;
+  const dataDir = opts.dataDir || defaultDataDir();
+  if (!isCloud) ensureDir(dataDir);
   const db = openDatabase(dataDir);
-  const dbFile = path.join(dataDir, 'dotacustoms.db');
+  const dbFile = isCloud ? 'postgres' : path.join(dataDir, 'dotacustoms.db');
   const dataset = loadDataset();
 
   // Секрет подписи токенов читается из базы. Пока он был случайным на
@@ -148,6 +150,11 @@ function createBackend(opts = {}) {
   }
 
   function shareInfo() {
+    // В облаке (DATABASE_URL) сайт живёт на Vercel — общий доступ к LAN
+    // бессмыслен: слушать локальный порт в серверлесс-функции нельзя.
+    if (isCloud) {
+      return { enabled: false, port: 0, share_port: 0, urls: [], lan: [], hostname: 'vercel' };
+    }
     return {
       enabled: shareState.enabled,
       port: ctx.port || 0,
@@ -162,14 +169,14 @@ function createBackend(opts = {}) {
 
   app.post('/api/share', requireAdmin, wrap((req, res) => {
     const on = !!(req.body && req.body.enabled);
-    shareState.enabled = on;
-    setSetting(db, 'share_enabled', on ? '1' : '0');
-    console.log(`[dotacustoms] общий доступ ${on ? 'ВКЛЮЧЁН' : 'выключен'}`);
+    shareState.enabled = on && !isCloud;
+    setSetting(db, 'share_enabled', shareState.enabled ? '1' : '0');
+    console.log(`[dotacustoms] общий доступ ${shareState.enabled ? 'ВКЛЮЧЁН' : 'выключен'}`);
 
     // Перевешиваем ПОСЛЕ ответа и не дожидаясь: close() ждёт завершения
     // текущих соединений, а текущее соединение — это и есть наш запрос.
     // Клиент переподключится сам: адрес сервера он узнаёт по требованию.
-    if (typeof ctx.rebind === 'function') {
+    if (!isCloud && typeof ctx.rebind === 'function') {
       setImmediate(() => {
         ctx.rebind(on).catch(err => console.error('[dotacustoms] не сменился адрес:', err.message));
       });
