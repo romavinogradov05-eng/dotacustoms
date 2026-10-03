@@ -15,7 +15,11 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const { open: openSqlite } = require('./sqlite');
+
+// ВАЖНО: node-sqlite3-wasm НЕ подключён на уровне модуля. На Vercel (PG-ветка,
+// DATABASE_URL) он не нужен вообще, а его .wasm не попадает в бандл функции —
+// require в этом месте уронил бы каждый холодный старт (ENOENT .wasm).
+// Единственное использование — ленивый require('./sqlite') в openSqliteLocal.
 
 const { defaultDataDir, ensureDir, MODES } = require('./config');
 const { nowIso } = require('./util');
