@@ -124,9 +124,11 @@ async function main() {
       // последовательности → следующий id продолжит с max(id)+1
       for (const table of TABLES) {
         if (!columnsOf(src, table).includes('id')) continue;
+        // Пустые таблицы: setval(seq, 1, false), иначе следующий id был бы
+        // ниже минимума последовательности (PG ≥14 это запрещает).
         await pg.query(
           `select setval(pg_get_serial_sequence($1, 'id'),
-             coalesce((select max(id) from ${table}), 0),
+             greatest(coalesce((select max(id) from ${table}), 0), 1),
              (select max(id) from ${table}) is not null)`,
           [table],
         );

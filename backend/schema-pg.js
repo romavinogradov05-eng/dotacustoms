@@ -26,7 +26,8 @@ create table if not exists users (
   is_banned     integer not null default 0,
   ban_reason    text not null default '',
   created_at    text not null,
-  last_seen_at  text
+  last_seen_at  text,
+  email         text not null default ''
 );
 create index if not exists idx_users_role on users(role);
 
