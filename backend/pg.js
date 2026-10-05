@@ -104,8 +104,38 @@ function pack(args) {
   return out;
 }
 
+const idColumnCache = new Map(); // таблица → есть ли колонка id
+
+/** Имя первой таблицы в INSERT (для решения, добавлять ли `returning id`). */
+function tableNameOf(sql) {
+  const m = /^\s*insert\s+(?:or\s+[a-z]+\s+)?into\s+([^\s(]+)/i.exec(sql);
+  return m ? m[1].replace(/"/g, '') : null;
+}
+
+/**
+ * Есть ли у таблицы колонка id. Проверяем один раз и кэшируем: не у всех
+ * таблиц она есть (sessions, build_votes, coach_scopes, modes, settings…),
+ * а `insert … returning id` без неё — ошибка 42703 на Postgres.
+ */
+function hasIdColumn(table) {
+  if (idColumnCache.has(table)) return idColumnCache.get(table);
+  let has = false;
+  try {
+    const r = call('all',
+      `select column_name from information_schema.columns
+        where table_name = $1 and column_name = 'id'`, [table]);
+    has = !!(r.rows && r.rows.length);
+  } catch { /* считаем, что колонки нет — запрос без returning id пройдёт */ }
+  idColumnCache.set(table, has);
+  return has;
+}
+
 function runSql(translatedSql, params, insert) {
-  const sql = insert ? `${translatedSql} returning id` : translatedSql;
+  let sql = translatedSql;
+  if (insert) {
+    const table = tableNameOf(translatedSql);
+    if (table && hasIdColumn(table)) sql = `${translatedSql} returning id`;
+  }
   const r = call('run', sql, params || []);
   return { changes: r.changes, lastInsertRowid: r.lastInsertRowid };
 }
