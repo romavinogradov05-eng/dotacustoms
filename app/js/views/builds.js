@@ -239,11 +239,6 @@
         h('img.hero-portrait', { src: store.heroIcon(hero), alt: '' }),
         h('div', [
           h('div.hero-name', { text: hero.name }),
-          h('div.meta-row', [
-            h('span', { text: (hero.roles || []).join(' · ') }),
-            h('span.dot', { text: '·' }),
-            h('span', { text: `сложность ${hero.complexity}/10` }),
-          ]),
         ]),
       ]) : h('div.help-note', { text: 'Герой не указан — билд подходит любому персонажу.' }),
       build.description ? h('div.md', { html: md.render(build.description), style: { marginTop: '14px' } }) : null,

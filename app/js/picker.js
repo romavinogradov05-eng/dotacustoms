@@ -138,7 +138,6 @@
       h('img.icon.round', { src: store.heroIcon(hero), alt: '' }),
       h('div.info', [
         h('span.nm', { text: hero.name }),
-        h('span.sub', { text: (hero.roles || []).join(' · ') + ` · сложность ${hero.complexity}/10` }),
       ]),
     ]);
   }
