@@ -57,9 +57,19 @@
         });
       }
       clear(results);
-      const shown = list.slice(0, 300);
+      let shown = list.slice(0, PICKER_LIMIT);
+      let customShown = 0;
+      if (!q) {
+        // Кастомные предметы (CHC/RR) сортируются в самый конец списка и
+        // раньше полностью терялись за лимитом — их не было видно в редакторе.
+        // Их немного, поэтому всегда довыводим блок внизу: конверты, книги
+        // и прочие кастомы выбираются без поиска.
+        const customTail = list.slice(PICKER_LIMIT).filter(e => e.custom);
+        customShown = customTail.length;
+        if (customShown) shown = shown.concat(customTail);
+      }
       count.textContent = list.length > shown.length
-        ? `Показаны первые ${shown.length} из ${list.length}`
+        ? `Показаны первые ${shown.length} из ${list.length}` + (customShown ? ' — кастомные предметы внизу' : '')
         : (list.length ? `${list.length} ${window.ui.plural(list.length, 'вариант', 'варианта', 'вариантов')}` : '');
 
       if (!list.length) {
@@ -151,6 +161,9 @@
       ]),
     ]);
   }
+
+  /** Сколько строк показывать в списке без поиска (кастомные — всегда сверх лимита). */
+  const PICKER_LIMIT = 300;
 
   /** Косметика и расходники — обычно первое, что берут. */
   const CATEGORY_ORDER = [
