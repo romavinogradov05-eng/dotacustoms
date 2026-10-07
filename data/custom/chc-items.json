@@ -61,7 +61,8 @@
       "related_abilities": [],
       "steam_image": "https://images.steamusercontent.com/ugc/2464122525103311302/AF9140D5B28B85576B905EF5CF80487BD7DC2B1D/",
       "icon_from": "steam",
-      "legacy_id": 900000
+      "legacy_id": 900000,
+      "cost": 5755
     },
     {
       "key": "azuresong_mageblade",
@@ -69,7 +70,7 @@
       "group": "magic",
       "mode": "*",
       "tier": 0,
-      "cost": 5115,
+      "cost": 5215,
       "ability_type": "Пассивная",
       "acts_on": "на вражеских существ",
       "damage": "магический",
@@ -102,7 +103,7 @@
       "group": "magic",
       "mode": "*",
       "tier": 1,
-      "cost": 10780,
+      "cost": 10880,
       "ability_type": "Пассивная",
       "acts_on": "на вражеских существ",
       "damage": "магический",
@@ -133,7 +134,7 @@
       "group": "magic",
       "mode": "*",
       "tier": 0,
-      "cost": 3280,
+      "cost": 3255,
       "ability_type": "Направленная на точку",
       "acts_on": "на вражеских существ",
       "damage": "магический",
@@ -156,7 +157,7 @@
       "group": "magic",
       "mode": "*",
       "tier": 0,
-      "cost": 7700,
+      "cost": 9450,
       "ability_type": "Ненаправленная",
       "acts_on": "на союзных существ",
       "summary": "+200% к восстановлению маны и заряды Магистрата",
@@ -186,7 +187,7 @@
       "group": "magic",
       "mode": "*",
       "tier": 0,
-      "cost": 6850,
+      "cost": 6765,
       "ability_type": "Пассивная",
       "upgrades": [
         "torture_pipe_2"
@@ -212,7 +213,7 @@
       "group": "magic",
       "mode": "*",
       "tier": 1,
-      "cost": 14500,
+      "cost": 14330,
       "ability_type": "Пассивная",
       "upgrades_from": "torture_pipe",
       "summary": "Улучшенный Torture Pipe: +1.25% урона DoT за единицу атрибута",
@@ -234,7 +235,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 0,
-      "cost": 375,
+      "cost": 725,
       "ability_type": "Пассивная",
       "upgrades": [
         "bitter_lineage_2"
@@ -259,7 +260,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 1,
-      "cost": 2025,
+      "cost": 2275,
       "ability_type": "Пассивная",
       "upgrades_from": "bitter_lineage",
       "upgrades": [
@@ -284,7 +285,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 2,
-      "cost": 4400,
+      "cost": 4550,
       "ability_type": "Пассивная",
       "upgrades_from": "bitter_lineage_2",
       "upgrades": [
@@ -312,7 +313,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 3,
-      "cost": 7900,
+      "cost": 7950,
       "ability_type": "Пассивная",
       "upgrades_from": "bitter_lineage_3",
       "upgrades": [
@@ -340,7 +341,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 4,
-      "cost": 11850,
+      "cost": 12550,
       "ability_type": "Пассивная",
       "upgrades_from": "bitter_lineage_4",
       "summary": "+120 к урону и 30 к уклонению, +80% урона навыка",
@@ -365,7 +366,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 0,
-      "cost": 2760,
+      "cost": 2115,
       "ability_type": "Пассивная",
       "upgrades": [
         "cois_breastplate"
@@ -391,7 +392,7 @@
       "group": "physical",
       "mode": "*",
       "tier": 1,
-      "cost": 9288,
+      "cost": 4990,
       "ability_type": "Ненаправленная",
       "upgrades_from": "incomplete_breastplate",
       "summary": "+70 к урону и 300 к скорости снарядов, иммунитет к замедлению",
@@ -448,7 +449,8 @@
       ],
       "steam_image": "https://images.steamusercontent.com/ugc/2464122525103412587/E5662F0EDD1B3ACA6637412133557C7F101A3E86/",
       "icon_from": "steam",
-      "legacy_id": 900009
+      "legacy_id": 900009,
+      "cost": 1450
     },
     {
       "key": "replica_rackatee",
@@ -620,7 +622,7 @@
       "group": "summoner",
       "mode": "*",
       "tier": 2,
-      "cost": 13915,
+      "cost": 14015,
       "ability_type": "Пассивная",
       "acts_on": "на союзных существ",
       "upgrades_from": "gang_executive_letter",
@@ -660,7 +662,7 @@
       "group": "summoner",
       "mode": "*",
       "tier": 2,
-      "cost": 14090,
+      "cost": 14390,
       "ability_type": "Пассивная",
       "acts_on": "на союзных существ",
       "upgrades_from": "gang_executive_letter",
@@ -695,7 +697,7 @@
       "group": "summoner",
       "mode": "*",
       "tier": 2,
-      "cost": 14915,
+      "cost": 15015,
       "ability_type": "Направленная на точку",
       "acts_on": "на союзных существ",
       "upgrades_from": "gang_executive_letter",
@@ -817,6 +819,25 @@
       "stats": {},
       "related_items": [
         "book_of_summoner"
+      ],
+      "related_abilities": [],
+      "icon_from": "crop",
+      "legacy_id": 0
+    },
+    {
+      "key": "fragment_of_relearning",
+      "name": "Fragment of Retraining",
+      "name_en": "Fragment of Relearning",
+      "group": "books",
+      "mode": "*",
+      "tier": 0,
+      "cost": 1200,
+      "ability_type": "Ненаправленная",
+      "summary": "Одноразово забывает случайный навык и даёт выбрать новый",
+      "body": "Ненаправленная способность — Повторное изучение (Retraining): забывает случайный навык с возвратом очков и предлагает выбрать новый.\n\nОсколок Tome of Retraining — дешёвая одноразовая альтернатива. Как и книги, в Ratten Run выпадает после потери Aegis.",
+      "stats": {},
+      "related_items": [
+        "tome_of_retraining"
       ],
       "related_abilities": [],
       "icon_from": "crop",
