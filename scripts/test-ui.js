@@ -548,7 +548,7 @@ async function main() {
   say('Кастомные предметы CHC');
   await check('каталог загрузился в store', async () => {
     const items = sandbox.store.customItems || [];
-    assert(items.length === 30, `предметов ${items.length}, ожидалось 30`);
+    assert(items.length === 31, `предметов ${items.length}, ожидалось 31`);
     assert(sandbox.store.customPatch === null,
       'патч гайд не называет, ждём null: ' + sandbox.store.customPatch);
     assert((sandbox.store.customGroups || []).length === 4, 'групп не 4');
@@ -658,13 +658,13 @@ async function main() {
   await check('режимы: RR не имеет своего магазина, все предметы общие', async () => {
     for (const mode of ['chc', 'rr']) {
       const list = sandbox.store.customItemsFor(mode);
-      assert(list.length === 30,
-        mode + ': доступно ' + list.length + ' предметов, ожидалось 30');
+      assert(list.length === 31,
+        mode + ': доступно ' + list.length + ' предметов, ожидалось 31');
       assert(list.every(i => sandbox.store.itemInMode(i, mode)),
         mode + ': фильтр пропустил чужой предмет');
     }
     assert(!sandbox.store.itemInMode(null, 'chc'), 'пустой предмет считается доступным');
-    return '30 предметов в CHC и 30 в RR';
+    return '31 предметов в CHC и 31 в RR';
   });
 
   await check('экран справочника открывается', async () => {
@@ -673,7 +673,7 @@ async function main() {
     assert(text.includes('Кастомные предметы'), 'нет заголовка');
     assert(text.includes('Книги'), 'нет группы «Книги»');
     assert(text.includes('Kast'), 'предмет из гайда не выведен');
-    assert(host.querySelectorAll('.custom-card').length === 30,
+    assert(host.querySelectorAll('.custom-card').length === 31,
       'карточек: ' + host.querySelectorAll('.custom-card').length);
     return `${host.querySelectorAll('.custom-card').length} карточек, ${host.innerHTML.length} симв.`;
   });
@@ -811,8 +811,11 @@ async function main() {
     const mine = (list.items || []).find(b => b.title === 'Билд с кастомным предметом');
     assert(mine, 'билда нет в списке');
     const host = await renderRoute('/builds/' + mine.id);
-    assert(host.textContent.includes('Kast'), 'предмет не показан на странице билда');
-    return 'предмет виден в карточке сборки';
+    // Название предмета теперь живёт в тултипе иконки, а не в тексте страницы.
+    const slot = [...host.querySelectorAll('.slot')].find(s =>
+      (s.getAttribute('title') || '').includes('Kast'));
+    assert(slot, 'предмет не показан на странице билда');
+    return 'предмет виден иконкой в карточке сборки';
   });
 
   await check('в билде больше шести предметов (съеденные)', async () => {
@@ -847,7 +850,10 @@ async function main() {
     assert(built && built.id, 'билд не создан: ' + JSON.stringify(built));
     const host = await renderRoute('/builds/' + built.id);
     const shown = sandbox.picker.displayName(pool);
-    assert(host.textContent.includes(shown), 'навык пула не показан: ' + host.textContent.slice(0, 200));
+    // Скиллы на странице — иконки, имя держится в tooltip карточки.
+    const cell = [...host.querySelectorAll('.sk')].find(s =>
+      (s.getAttribute('title') || '').includes(shown));
+    assert(cell, 'навык пула не показан: ' + host.textContent.slice(0, 200));
     return shown;
   });
 
@@ -1432,7 +1438,7 @@ async function main() {
   const GUEST = [
     ['главная', '/', h => assert(countTags(h, 'h2') + countTags(h, 'h1') > 0, 'нет заголовка')],
     ['справочник кастомных предметов', '/custom-items', h => {
-      assert(h.querySelectorAll('.custom-card').length === 30, 'карточек не 30');
+      assert(h.querySelectorAll('.custom-card').length === 31, 'карточек не 31');
     }],
     ['билды', '/builds', h => assert(h.innerHTML.length > 200, 'почти пусто')],
     ['топы', '/tops', h => assert(h.innerHTML.length > 200, 'почти пусто')],

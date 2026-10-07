@@ -102,15 +102,31 @@
 
   /* ── карточка ──────────────────────────────────────────────────────── */
 
+  /** Имя позиции: герои и нейтралки — английским названием, остальное как в справочнике. */
+  function labelOf(kind, ref) {
+    if (!ref) return '—';
+    if (kind === 'heroes' || kind === 'neutrals') return ref.name_en || ref.name || ref.key;
+    return ref.name || ref.name_en || ref.key;
+  }
+
+  /** Иконка позиции: герой — круглым портретом, нейтралка/способность — иконкой. */
+  function tileIcon(kind, ref) {
+    if (!ref) return h('span.icon');
+    if (kind === 'heroes') {
+      return h('img.icon.round', { src: store.heroIcon(ref), alt: '' });
+    }
+    return ui.dotaIcon(store.icon(ref.img));
+  }
+
   function card(kind, entry, opts) {
     const ref = opts.refEntry(kind, entry.ref_id);
     const node = h('div.tl-card', {
       draggable: 'true',
       tabindex: '0',
       'data-ref': String(entry.ref_id),
-      title: (ref ? (ref.name || ref.name_en) : 'не найден') + (entry.note ? ' — ' + entry.note : ''),
+      title: (ref ? labelOf(kind, ref) : 'не найден') + (entry.note ? ' — ' + entry.note : ''),
     }, [
-      h('span.tl-name', { text: ref ? (ref.name || ref.name_en) : '—' }),
+      tileIcon(kind, ref),
       // Перетаскивание не единственный способ: на тач-экране и с
       // клавиатуры сдвиг одной кнопкой привычнее.
       h('div.tl-ctl', [
@@ -217,7 +233,11 @@
       }
 
       board.appendChild(h('div.tl-row', [
-        h('div.tl-label', { text: labelFor(row.tier) }),
+        h(`div.tl-label${opts.onAddTier ? '.add' : ''}`, {
+          text: labelFor(row.tier),
+          title: opts.onAddTier ? ('Добавить позицию в тир ' + labelFor(row.tier)) : null,
+          onclick: opts.onAddTier ? () => opts.onAddTier(row.tier) : null,
+        }),
         strip,
       ]));
     }
@@ -227,6 +247,6 @@
 
   window.tierboard = {
     render, moveEntry, shiftEntry, renumber, rowsOf, stats,
-    tiers, NO_TIER,
+    tiers, NO_TIER, labelOf, tileIcon,
   };
 })();

@@ -237,8 +237,11 @@
           : t.kind === 'neutrals' ? store.neutralById.get(e.ref_id)
             : store.abilityById.get(e.ref_id);
         if (!ref) continue;
+        const refLabel = t.kind === 'heroes' || t.kind === 'neutrals'
+          ? (ref.name_en || ref.name || ref.key)
+          : picker.displayName(ref);
         preview.appendChild(h('span.fi', {
-          title: picker.displayName(ref),
+          title: refLabel,
           style: { width: t.kind === 'heroes' ? '26px' : '32px', height: '24px', display: 'inline-block' },
         }, t.kind === 'heroes'
           ? h('img', { src: store.heroIcon(ref), alt: '', style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } })

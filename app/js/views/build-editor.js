@@ -182,7 +182,10 @@
           onclick: () => addSkillOpen(),
         }, [
           h('img.icon.round', { src: store.heroIcon(hero), alt: '' }),
-          h('span', { text: hero.name }),
+          h('span', {
+            text: hero.name_en || hero.name,
+            title: hero.name_en && hero.name_en !== hero.name ? hero.name : null,
+          }),
           stray ? h('span.badge.badge-red', {
             text: 'нет в ростере',
             title: 'Герой не входит в ростер режима — билд не покажут в общем списке',
@@ -471,7 +474,7 @@
             onclick: e => { e.stopPropagation(); picker.showCard(n, 'neutral'); } }, [
             ui.dotaIcon(store.neutralIcon(n)),
             h('div.info', [
-              h('span.nm', { text: picker.displayName(n) }),
+              h('span.nm', { text: n.name_en || n.name || '' }),
               h('span.sub', { text: entry.note || `тир ${n.tier}` }),
             ]),
           ]),

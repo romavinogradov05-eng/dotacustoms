@@ -14,12 +14,13 @@
     for (const entry of list) {
       const item = store.anyItemById(entry.item_id);
       if (!item) continue;
-      grid.appendChild(h('div.slot', { title: 'Показать карточку', onclick: () => picker.showCard(item, 'item') }, [
+      const noteBits = [item.sub, entry.note, picker.costText(item)].filter(Boolean);
+      grid.appendChild(h('div.slot', {
+        title: [picker.displayName(item)].concat(noteBits).join(' — '),
+        onclick: () => picker.showCard(item, 'item'),
+      }, [
         ui.dotaIcon(store.icon(item.img)),
-        h('div.info', [
-          h('span.nm', { text: picker.displayName(item) }),
-          h('span.sub', { text: item.sub || entry.note || picker.costText(item) || '' }),
-        ]),
+        entry.note ? h('div.info', [h('span.sub', { text: entry.note })] ) : null,
       ]));
     }
     return grid;
@@ -41,7 +42,6 @@
       }, [
         h('span.lvl', { text: `ур. ${entry.rank}` }),
         ability.img ? ui.dotaIcon(store.abilityIcon(ability)) : h('span.icon'),
-        h('span.nm', { text: picker.displayName(ability) }),
       ]);
       wrap.appendChild(cell);
     }
@@ -76,12 +76,12 @@
     for (const entry of list) {
       const n = store.neutralById.get(entry.neutral_id);
       if (!n) continue;
-      grid.appendChild(h('div.slot', { onclick: () => picker.showCard(n, 'neutral') }, [
+      const name = n.name_en || n.name || '';
+      grid.appendChild(h('div.slot', {
+        title: entry.note ? name + ' — ' + entry.note : name,
+        onclick: () => picker.showCard(n, 'neutral'),
+      }, [
         ui.dotaIcon(store.neutralIcon(n)),
-        h('div.info', [
-          h('span.nm', { text: picker.displayName(n) }),
-          h('span.sub', { text: entry.note || `тир ${n.tier}` }),
-        ]),
       ]));
     }
     return grid;
@@ -238,7 +238,10 @@
       hero ? h('div.hero-banner', [
         h('img.hero-portrait', { src: store.heroIcon(hero), alt: '' }),
         h('div', [
-          h('div.hero-name', { text: hero.name }),
+          h('div.hero-name', {
+            text: hero.name_en || hero.name,
+            title: hero.name_en && hero.name_en !== hero.name ? hero.name : null,
+          }),
         ]),
       ]) : h('div.help-note', { text: 'Герой не указан — билд подходит любому персонажу.' }),
       build.description ? h('div.md', { html: md.render(build.description), style: { marginTop: '14px' } }) : null,

@@ -148,6 +148,8 @@
       h('img.icon.round', { src: store.heroIcon(hero), alt: '' }),
       h('div.info', [
         h('span.nm', { text: hero.name }),
+        (hero.name_en && hero.name_en !== hero.name)
+          ? h('span.sub', { text: hero.name_en }) : null,
       ]),
     ]);
   }
@@ -322,7 +324,7 @@
     if (entry.tier) push('Тир', entry.tier);
     if (entry.hero) {
       const hero = store.heroByKey.get(entry.hero);
-      if (hero) push('Герой', hero.name);
+      if (hero) push('Герой', hero.name_en || hero.name);
     }
     const table = h('dl.kv');
     for (const [k, v] of rows) {
@@ -443,7 +445,7 @@
       box.appendChild(h('h4', { text: 'Похоже на умения героев', style: { margin: '14px 0 6px' } }));
       box.appendChild(h('div.chip-row', rel.abilities.map(a => {
         const hero = a.hero ? store.heroByKey.get(a.hero) : null;
-        return h('span.chip', { text: (hero ? hero.name + ' · ' : '') + (a.name || a.name_en) });
+        return h('span.chip', { text: (hero ? (hero.name_en || hero.name) + ' · ' : '') + (a.name || a.name_en) });
       })));
     }
 

@@ -78,7 +78,7 @@
       const hero = a.hero ? store.heroByKey.get(a.hero) : null;
       chips.appendChild(h('span.chip.chip-hero', {
         title: 'Похоже на умение героя',
-        text: '≈ ' + (hero ? hero.name + ' · ' : '') + (a.name || a.name_en),
+        text: '≈ ' + (hero ? (hero.name_en || hero.name) + ' · ' : '') + (a.name || a.name_en),
       }));
     }
     return h('div.custom-rel', [h('span.k', { text: 'Похоже на:' }), chips]);

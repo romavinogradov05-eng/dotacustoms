@@ -252,6 +252,7 @@ function main() {
       // в каком режиме предмет доступен: 'chc' | 'rr' | '*' (оба)
       mode: c.mode || '*',
       tier: c.tier || 0,
+      cost: c.cost || 0,
       currency: c.currency || null,
       quality: 'custom',
       category: 'custom',

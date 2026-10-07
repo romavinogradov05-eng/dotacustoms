@@ -191,7 +191,7 @@
     }
 
     const content = typeof body === 'function' ? body(api) : body;
-    if (content) bodyBox.appendChild(content);
+    if (content) append(bodyBox, content);
 
     function close() {
       const idx = modalStack.indexOf(api);

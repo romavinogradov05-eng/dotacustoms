@@ -25,6 +25,7 @@
 
   function refName(kind, ref) {
     if (!ref) return '—';
+    if (kind === 'heroes' || kind === 'neutrals') return ref.name_en || ref.name || ref.key;
     return picker.displayName(ref);
   }
 
@@ -220,9 +221,9 @@
         for (const e of row.items) {
           const ref = refEntry(top.kind, e.ref_id);
           const c = h('div.tl-card.view', {
-            title: (ref ? (ref.name || ref.name_en) : '—') + (e.note ? ' — ' + e.note : ''),
+            title: (ref ? tierboard.labelOf(top.kind, ref) : '—') + (e.note ? ' — ' + e.note : ''),
           }, [
-            h('span.tl-name', { text: ref ? (ref.name || ref.name_en) : '—' }),
+            tierboard.tileIcon(top.kind, ref),
             e.note ? h('span.tl-note', { text: e.note }) : null,
           ]);
           c.addEventListener('click', () => ref && picker.showCard(ref,
@@ -300,14 +301,12 @@
 
   function entryRow(kind, ref, entry) {
     return h('div.entry-row', {
+      title: ref ? refName(kind, ref) : '',
       onclick: () => ref && picker.showCard(ref, kind === 'heroes' ? 'hero' : kind === 'neutrals' ? 'neutral' : 'ability'),
     }, [
       h('span.rank', { text: '#' + entry.rank }),
       refIcon(kind, ref),
-      h('div.info', [
-        h('span.nm', { text: refName(kind, ref) }),
-        entry.note ? h('span.note', { text: entry.note }) : null,
-      ]),
+      entry.note ? h('div.info', [h('span.note', { text: entry.note })]) : null,
     ]);
   }
 
@@ -435,6 +434,7 @@
       {
         entriesHost.appendChild(tierboard.render(model.kind, model.entries, {
           refEntry,
+          onAddTier: tier => addEntry(tier),
           onRemove: refId => {
             const i = model.entries.findIndex(e => e.ref_id === refId);
             if (i >= 0) { model.entries.splice(i, 1); drawEntries(); }
@@ -484,13 +484,14 @@
       statsHost.style.color = st.total >= need ? '' : 'var(--red)';
     }
 
-    function addEntry() {
+    function addEntry(tier) {
       const picked = model.entries.map(e => e.ref_id);
       const opts = {
         picked,
         onPick: ref => {
           if (model.entries.length >= 200) { ui.err('Максимум 200 позиций'); return; }
-          model.entries.push({ ref_id: ref.id, rank: model.entries.length + 1, tier: '', note: '' });
+          model.entries.push({ ref_id: ref.id, rank: model.entries.length + 1, tier: tier || '', note: '' });
+          tierboard.renumber(model.entries);
           drawEntries();
         },
       };

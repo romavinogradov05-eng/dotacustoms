@@ -870,6 +870,8 @@ body::before {
   font-size: 12.5px; color: var(--text); max-width: 260px;
   user-select: none;
 }
+.tl-card .icon { width: 28px; height: 22px; object-fit: contain; flex: none; }
+.tl-card .icon.round { width: 26px; height: 26px; border-radius: 50%; }
 .tl-card:hover { border-color: var(--border-bright); }
 .tl-card.dragging { opacity: 0.45; cursor: grabbing; }
 .tl-card.view { cursor: pointer; }
@@ -881,8 +883,10 @@ body::before {
   font-size: 10px; line-height: 1; color: var(--text-mute);
 }
 .tl-ctl button:hover { color: var(--gold-2); }
-.tl-x { display: none; }
-.tl-card:hover .tl-x { display: inline; }
+.tl-x { margin-left: 2px; }
+.tl-label.add { cursor: pointer; position: relative; transition: transform 0.12s; }
+.tl-label.add:hover { transform: scale(1.06); }
+.tl-label.add::after { content: '＋'; position: absolute; right: 3px; bottom: 2px; font-size: 11px; opacity: 0.85; }
 
 @media (max-width: 720px) {
   .tl-label { width: 42px; font-size: 14px; }

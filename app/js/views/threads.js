@@ -227,7 +227,10 @@
       }
       heroHost.appendChild(h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
         h('img', { src: store.heroIcon(hero), alt: '', style: { width: '40px', height: '40px', borderRadius: '50%' } }),
-        h('span', { text: hero.name, style: { flex: '1' } }),
+        h('span', {
+          text: hero.name_en || hero.name, style: { flex: '1' },
+          title: hero.name_en && hero.name_en !== hero.name ? hero.name : null,
+        }),
         h('button.icon-btn', { type: 'button', text: '✕', onclick: () => { model.hero_id = null; drawHero(); } }),
       ]));
     }
@@ -525,7 +528,7 @@
         h('div.field-hint', { text: 'Привязанный герой' }),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' } }, [
           h('img', { src: store.heroIcon(hero), alt: '', style: { width: '40px', height: '40px', borderRadius: '50%' } }),
-          h('span', { text: hero.name }),
+          h('span', { text: hero.name_en || hero.name }),
         ]),
       ]) : null,
     ]));
