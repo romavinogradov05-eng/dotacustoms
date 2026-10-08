@@ -839,6 +839,44 @@ async function main() {
   const topAfter = await api('GET', `/api/tops/${queueTop.data.id}`, { token: plainToken });
   ok('подтверждённый топ-черновик одобрен', topAfter.data?.top?.moderation === 'approved');
 
+  // Регрессия: публикация черновика через PATCH должна сразу менять
+  // модерацию — раньше топ оставался 'pending' и обычные игроки его не видели.
+  const patchDraft = await api('POST', '/api/tops', {
+    token: plainToken,
+    body: {
+      mode: 'chc', kind: 'heroes', title: 'Топ-черновик PATCH', is_draft: true,
+      entries: heroRefs.slice(0, 4).map((ref_id, i) => ({ ref_id, rank: i + 1, tier: 'S' })),
+    },
+  });
+  ok('черновик топа создан (pending)', patchDraft.data?.pending === true,
+    `pending = ${patchDraft.data?.pending}`);
+  const patchPub = await api('PATCH', `/api/tops/${patchDraft.data.id}`, {
+    token: plainToken, body: { is_draft: false },
+  });
+  ok('публикация топа через PATCH', patchPub.status === 200);
+  const patchGet = await api('GET', `/api/tops/${patchDraft.data.id}`, { token: plainUserToken });
+  ok('после PATCH модерация топа approved',
+    patchGet.data?.top?.moderation === 'approved',
+    `moderation = ${patchGet.data?.top?.moderation}`);
+  const patchList = await api('GET', '/api/tops');
+  ok('топ, опубликованный через PATCH, виден в общей ленте',
+    (patchList.data?.items || []).some(t => t.id === patchDraft.data.id));
+
+  // Тот же баг был у билдов: PATCH менял is_draft, но не moderation.
+  const patchBuild = await api('POST', '/api/builds', {
+    token: plainToken,
+    body: { mode: 'chc', title: 'Билд-черновик PATCH', is_draft: true, items: [], skills: [], talents: [] },
+  });
+  ok('черновик билда создан (pending)', patchBuild.data?.pending === true);
+  await api('PATCH', `/api/builds/${patchBuild.data.id}`, { token: plainToken, body: { is_draft: false } });
+  const patchBuildGet = await api('GET', `/api/builds/${patchBuild.data.id}`, { token: plainUserToken });
+  ok('после PATCH модерация билда approved',
+    patchBuildGet.data?.build?.moderation === 'approved',
+    `moderation = ${patchBuildGet.data?.build?.moderation}`);
+  const patchBuildList = await api('GET', '/api/builds');
+  ok('билд, опубликованный через PATCH, виден в общей ленте',
+    (patchBuildList.data?.items || []).some(b => b.id === patchBuild.data.id));
+
   // Категории топов — отдельные: герои, скиллы, нейтралки
   const kindsOk = [];
   const kindNotes = [];

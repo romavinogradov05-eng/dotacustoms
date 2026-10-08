@@ -219,7 +219,14 @@ module.exports = function topRoutes(ctx) {
     if (req.body.title !== undefined) set.title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });
     if (req.body.description !== undefined) set.description = str(req.body.description, { field: 'описание', max: LIMITS.descriptionMax, required: false });
     if (req.body.patch !== undefined) set.patch = str(req.body.patch, { field: 'патч', max: 12, required: false });
-    if (req.body.is_draft !== undefined) set.is_draft = bool(req.body.is_draft) ? 1 : 0;
+    // Публикация черновика должна сразу менять и модерацию. Раньше PATCH
+    // обновлял только is_draft, а moderation оставалась 'pending' — топ
+    // формально опубликован, но обычные игроки его не видят.
+    if (req.body.is_draft !== undefined) {
+      const isDraft = bool(req.body.is_draft) ? 1 : 0;
+      set.is_draft = isDraft;
+      set.moderation = moderationFor(req.user, isDraft);
+    }
     if (req.body.mode !== undefined) set.mode = oneOf(req.body.mode, MODE_KEYS, { field: 'режим' });
     if (req.body.kind !== undefined) set.kind = oneOf(req.body.kind, TOP_KIND_KEYS, { field: 'вид топа' });
     if (Object.keys(set).length) {

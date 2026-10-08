@@ -46,7 +46,9 @@
     // отдельными категориями, а не одним списком с фильтром.
     const routeKind = params && params.kind ? params.kind : '';
     const state = {
-      mode: query.mode || (store.prefs.mode === 'all' ? '' : store.prefs.mode) || '',
+      // Топы открываются сразу в «Все режимы»: раньше применялся сохранённый
+      // prefs.mode ('chc') и пользователь видел только CHC, даже не зная про фильтр.
+      mode: query.mode || '',
       kind: routeKind || query.kind || '',
       sort: query.sort || 'new',
       q: query.q || '',

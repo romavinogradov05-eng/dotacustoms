@@ -1016,6 +1016,11 @@ async function main() {
     const chc = tabOf('Custom Hero Chaos');
     const rr = tabOf('Ratten Run');
     assert(chc && rr, 'нет вкладок режимов CHC/Ratten Run');
+    const all = tabOf('Все режимы');
+    assert(all, 'нет вкладки «Все режимы»');
+    // Топы открываются сразу «Все режимы»: раньше фильтр по умолчанию
+    // подсвечивал CHC (store.prefs.mode), и другие режимы были не видны.
+    assert(all.classList.contains('active'), 'при открытии топов не активна «Все режимы»');
     // Раньше клик фильтровал список, но активной оставалась прежняя
     // вкладка — переключение выглядело сломанным.
     rr.click();

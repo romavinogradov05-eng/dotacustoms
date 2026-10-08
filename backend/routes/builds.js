@@ -290,7 +290,14 @@ module.exports = function buildRoutes(ctx) {
     if (req.body.patch !== undefined) set.patch = str(req.body.patch, { field: 'патч', max: 12, required: false });
     if (req.body.difficulty !== undefined) set.difficulty = int(req.body.difficulty, { field: 'сложность', min: 1, max: 5 });
     if (req.body.hero_id !== undefined) set.hero_id = req.body.hero_id ? int(req.body.hero_id, { field: 'герой', min: 1, max: 1000 }) : null;
-    if (req.body.is_draft !== undefined) set.is_draft = bool(req.body.is_draft) ? 1 : 0;
+    // Публикация черновика должна сразу менять и модерацию, иначе опубликованный
+    // билд остаётся 'pending' и не виден другим игрокам (PATCH менял is_draft,
+    // но не moderation).
+    if (req.body.is_draft !== undefined) {
+      const isDraft = bool(req.body.is_draft) ? 1 : 0;
+      set.is_draft = isDraft;
+      set.moderation = moderationFor(req.user, isDraft);
+    }
     if (req.body.items !== undefined) set.items = JSON.stringify(cleanItems(req.body.items, { max: C.maxItems }));
     if (req.body.skills !== undefined) set.skills = JSON.stringify(cleanSkills(req.body.skills, { max: C.maxSkills }));
     if (req.body.talents !== undefined) set.talents = JSON.stringify(talentsOrThrow(req.body.talents));
