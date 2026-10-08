@@ -64,8 +64,10 @@
   /** Полностью очищает узел. */
   function clear(el) { while (el && el.firstChild) el.removeChild(el.firstChild); return el; }
 
-  /** Создаёт <svg><image href=…></svg> — так работают иконки предметов Dota. */
-  function dotaIcon(src, cls) {
+  /** Создаёт <svg><image href=…></svg> — так работают иконки предметов Dota.
+      wide = true — прямоугольный кадр 88×64 (широкие иконки, напр. предметы),
+      иначе квадрат 64×64 (умения, айтемы-квадраты). */
+  function dotaIcon(src, cls, wide) {
     const img = document.createElementNS(SVG_NS, 'image');
     img.setAttributeNS(XLINK_NS, 'xlink:href', src);
     img.setAttribute('href', src);
@@ -73,7 +75,7 @@
     img.setAttribute('height', '100%');
     img.setAttribute('preserveAspectRatio', 'xMinYMin meet');
     const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 64 64');
+    svg.setAttribute('viewBox', wide ? '0 0 88 64' : '0 0 64 64');
     svg.setAttribute('class', cls || 'icon');
     svg.appendChild(img);
     return svg;

@@ -13,9 +13,10 @@ const {
   str, int, oneOf, bool, bad, notFound, forbidden, nowIso, paging, timeAgo,
   cleanItems, cleanNeutrals, cleanSkills, cleanTalents,
 } = require('../util');
-const { requireAuth, requireStaff, isCoachFor } = require('../auth');
+const { requireAuth, requireStaff, requireAdmin, isCoachFor } = require('../auth');
 const { wrap } = require('../http');
 const { MODERATION, MODERATION_KEYS, moderationFor, notifyAdmins } = require('../notify');
+const { assertCanChat, moderateText } = require('../modfilter');
 
 /** Собирает публичное представление билда. */
 function buildPayload(db, b, viewer) {
@@ -211,14 +212,19 @@ module.exports = function buildRoutes(ctx) {
     db.prepare('update builds set views = views + 1 where id = ?').run(b.id);
     b.views = Number(b.views || 0) + 1;
 
+    // Публичное — только одобренные; админ видит ещё и pending-комментарии.
+    const seePending = !!req.user && req.user.role === ROLES.ADMIN;
     const comments = db.prepare(`
       select c.*, u.nickname, u.username, u.avatar, u.role
         from build_comments c join users u on u.id = c.author_id
        where c.build_id = ? and c.is_deleted = 0
+         ${seePending ? '' : "and c.moderation = 'approved'"}
        order by c.created_at asc
     `).all(b.id).map(c => ({
       id: c.id, body: c.body, created_at: c.created_at, ago: timeAgo(c.created_at),
-      edited_at: c.edited_at, can_delete: !!req.user && (req.user.id === c.author_id || req.user.role === ROLES.ADMIN),
+      edited_at: c.edited_at,
+      pending: c.moderation === MODERATION.PENDING,
+      can_delete: !!req.user && (req.user.id === c.author_id || req.user.role === ROLES.ADMIN),
       author: { id: c.author_id, nickname: c.nickname, username: c.username, avatar: c.avatar, role: c.role },
     }));
 
@@ -352,11 +358,42 @@ module.exports = function buildRoutes(ctx) {
     const id = Number(req.params.id);
     const b = db.prepare('select id from builds where id = ?').get(id);
     if (!b) throw notFound('Билд не найден');
+    assertCanChat(db, req.user);
     const body = str(req.body.body, { field: 'комментарий', max: LIMITS.bodyMax });
+    // Приемлемость решает фильтр, но публикует администратор. Помеченное
+    // уходит в очередь в админке, автору показываем «отправлено на проверку».
+    const verdict = moderateText(body);
+    const moderation = verdict.flagged ? MODERATION.PENDING : MODERATION.APPROVED;
     const info = db.prepare(
-      'insert into build_comments (build_id, author_id, body, created_at) values (?,?,?,?)'
-    ).run(id, req.user.id, body, nowIso());
-    res.status(201).json({ id: Number(info.lastInsertRowid) });
+      'insert into build_comments (build_id, author_id, body, moderation, created_at) values (?,?,?,?,?)'
+    ).run(id, req.user.id, body, moderation, nowIso());
+    if (moderation === MODERATION.PENDING) {
+      notifyAdmins(db, {
+        kind: 'moderation',
+        title: 'Комментарий ждёт проверки',
+        body: `Возможно неуместное сообщение от ${req.user.nickname} в обсуждении: ${verdict.reasons.join('; ')}.`,
+        link: '/admin?tab=comments',
+        actorId: req.user.id,
+      });
+    }
+    res.status(201).json({
+      id: Number(info.lastInsertRowid),
+      moderation,
+      pending: moderation === MODERATION.PENDING,
+    });
+  }));
+
+  // Удалить все сообщения из обсуждения — только администратор.
+  router.post('/:id/comments/clear', requireAdmin, wrap((req, res) => {
+    const id = Number(req.params.id);
+    if (!db.prepare('select id from builds where id = ?').get(id)) throw notFound('Билд не найден');
+    const info = db.prepare('update build_comments set is_deleted = 1 where build_id = ? and is_deleted = 0').run(id);
+    db.prepare(`
+      insert into mod_log (actor_id, action, target_type, target_id, reason, created_at)
+      values (?,?,?,?,?,?)
+    `).run(req.user.id, 'clear_comments', 'build', id,
+      str(req.body?.reason, { field: 'причина', max: 300, required: false }), nowIso());
+    res.json({ ok: true, cleared: Number(info.changes) });
   }));
 
   router.delete('/:buildId/comments/:commentId', requireAuth, wrap((req, res) => {

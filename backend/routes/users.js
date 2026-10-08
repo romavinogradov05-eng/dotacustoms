@@ -10,6 +10,7 @@ const {
 } = require('../util');
 const { requireAuth, coachScopes } = require('../auth');
 const { wrap, rateLimit } = require('../http');
+const { chatBanPayload } = require('../modfilter');
 
 const FLAG_TARGETS = ['build', 'top', 'thread', 'post', 'comment', 'guide'];
 const FLAG_REASONS = ['spam', 'abuse', 'plagiarism', 'wrong_info', 'other'];
@@ -133,6 +134,7 @@ module.exports = function userRoutes(ctx) {
         last_seen_ago: u.last_seen_at ? timeAgo(u.last_seen_at) : null,
         is_banned: !!u.is_banned,
         coach_scopes: coachScopes(db, u),
+        chat_ban: chatBanPayload(db, u.id),
         stats,
       },
       builds, tops, threads,

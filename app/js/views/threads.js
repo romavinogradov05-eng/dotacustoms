@@ -361,7 +361,13 @@
     /* ── дерево ответов ── */
     const replyHost = h('div.panel', [
       h('div.panel-title', [
-        h('span', { text: `💬 Обсуждение (${posts.length})` }),
+        h('span', { text: `💬 Обсуждение (${posts.filter(p => !p.pending).length})` }),
+        h('div.tools', store.isAdmin()
+          ? h('button.btn.btn-sm.btn-danger', {
+            type: 'button', text: 'Очистить обсуждение',
+            onclick: () => clearPosts(thread, () => renderDetail(host, params)),
+          })
+          : null),
       ]),
     ]);
     const tree = h('div.thread-tree');
@@ -389,13 +395,14 @@
 
     function postNode(p, depth) {
       const node = h('div', { style: depth ? {} : {} });
-      const msg = h('div.msg', { class: (store.me && store.me.id === p.author.id ? 'mine ' : '') + (p.is_deleted ? 'deleted' : '') }, [
+      const msg = h('div.msg', { class: (store.me && store.me.id === p.author.id ? 'mine ' : '') + (p.is_deleted ? 'deleted ' : '') + (p.pending ? 'pending' : '') }, [
         auth.avatarNode(p.author, 'avatar-sm'),
         h('div', { style: { flex: '1', minWidth: '0' } }, [
           h('div.head', [
             h('span.nick', { text: p.author.nickname }),
             auth.roleBadge(p.author),
             h('span.time', { text: p.ago }),
+            p.pending ? h('span.badge.badge-pending', { text: '⏳ на проверке' }) : null,
             p.edited_at ? h('span.time', { text: '(изменено)' }) : null,
             h('div.tools', [
               !p.is_deleted && store.me ? h('button.icon-btn', {
@@ -467,6 +474,18 @@
         composerWrap.appendChild(h('div.help-note', { text: '🔒 Ветка закрыта — новые сообщения запрещены.' }));
         return;
       }
+      const chatBan = store.me.chat_ban;
+      if (chatBan && chatBan.active) {
+        composerWrap.appendChild(h('div.help-note.ban-note', [
+          h('b', { text: '⚠️ Чат заблокирован' }),
+          ' — ',
+          chatBan.forever
+            ? 'ты не можешь писать в ветках и комментариях.'
+            : `сможешь снова писать ${ui.ago(chatBan.until)}.`,
+          chatBan.reason ? h('div', { style: { marginTop: '4px' }, text: `Причина: ${chatBan.reason}` }) : null,
+        ]));
+        return;
+      }
       const composer = h('div.composer');
       if (replyTo) {
         composer.appendChild(h('div.replying-to', [
@@ -489,7 +508,11 @@
           const r = await api.post(`/threads/${thread.id}/posts`, { body: { body, parent_id: replyTo ? replyTo.id : null } });
           e.target.disabled = false;
           if (!r.ok) { ui.apiError(r, 'Сообщение не отправилось'); return; }
-          ui.ok('Отправлено');
+          if (r.data && r.data.pending) {
+            ui.ok('Сообщение отправлено на проверку и появится после одобрения администратором');
+          } else {
+            ui.ok('Отправлено');
+          }
           renderDetail(host, params);
         },
       })));
@@ -605,6 +628,19 @@
     if (!res.ok) { ui.apiError(res, 'Не удалось удалить'); return; }
     store.dropCache('/threads');
     ui.ok('Ветка удалена');
+    if (onDone) onDone();
+  }
+
+  async function clearPosts(thread, onDone) {
+    const yes = await ui.confirm({
+      title: 'Очистить обсуждение?',
+      text: `Все сообщения в «${thread.title}» будут скрыты для всех. Отменить нельзя.`,
+      okLabel: 'Очистить', kind: 'danger',
+    });
+    if (!yes) return;
+    const res = await api.post(`/threads/${thread.id}/posts/clear`, { body: { reason: 'очищено админом' } });
+    if (!res.ok) { ui.apiError(res, 'Не удалось очистить'); return; }
+    ui.ok('Обсуждение очищено');
     if (onDone) onDone();
   }
 

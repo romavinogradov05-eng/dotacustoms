@@ -19,8 +19,11 @@
         title: [picker.displayName(item)].concat(noteBits).join(' — '),
         onclick: () => picker.showCard(item, 'item'),
       }, [
-        ui.dotaIcon(store.icon(item.img)),
-        entry.note ? h('div.info', [h('span.sub', { text: entry.note })] ) : null,
+        ui.dotaIcon(store.icon(item.img), null, true),
+        h('div.info', [
+          h('span.nm', { text: picker.displayName(item) }),
+          entry.note ? h('span.sub', { text: entry.note }) : null,
+        ]),
       ]));
     }
     return grid;
@@ -42,6 +45,7 @@
       }, [
         h('span.lvl', { text: `ур. ${entry.rank}` }),
         ability.img ? ui.dotaIcon(store.abilityIcon(ability)) : h('span.icon'),
+        h('span.nm', { text: picker.displayName(ability) }),
       ]);
       wrap.appendChild(cell);
     }
@@ -50,22 +54,6 @@
       text: `Максимальный уровень прокачки в билде: ${maxRank}`,
     });
     return h('div', [wrap, legend]);
-  }
-
-  /* ── таланты ─────────────────────────────────────────────────────── */
-  function talentsBlock(build) {
-    const ids = (build.talents || []).filter(Boolean);
-    if (!ids.length) return h('div.empty', [h('p', { text: 'Таланты не выбраны' })]);
-    const list = h('div.talent-list');
-    for (const id of ids) {
-      const talent = store.abilityById.get(id);
-      if (!talent) continue;
-      list.appendChild(h('div.talent-row.chosen', [
-        h('span.lvl', { text: '★' }),
-        h('span.txt', { text: picker.displayName(talent) }),
-      ]));
-    }
-    return list;
   }
 
   /* ── нейтралки ───────────────────────────────────────────────────── */
@@ -81,7 +69,11 @@
         title: entry.note ? name + ' — ' + entry.note : name,
         onclick: () => picker.showCard(n, 'neutral'),
       }, [
-        ui.dotaIcon(store.neutralIcon(n)),
+        ui.dotaIcon(store.neutralIcon(n), null, true),
+        h('div.info', [
+          h('span.nm', { text: picker.displayName(n) }),
+          entry.note ? h('span.sub', { text: entry.note }) : null,
+        ]),
       ]));
     }
     return grid;
@@ -104,7 +96,7 @@
 
     const head = h('div.page-head', [
       h('h1', { text: 'Билды' }),
-      h('div.sub', { text: 'Сборки предметов, порядок скиллов и таланты. Подтверждённые отмечены значком Coach.' }),
+      h('div.sub', { text: 'Сборки предметов, порядок скиллов и нейтралки. Подтверждённые отмечены значком Coach.' }),
       store.isStaff() ? h('div.btn-row', h('a.btn.btn-primary', { href: '#/builds/new', text: '＋ Собрать билд' })) : null,
     ]);
     host.appendChild(head);
@@ -257,11 +249,6 @@
       skillsBlock(build),
     ]));
 
-    main.appendChild(h('div.panel', [
-      h('div.panel-title', [h('span', { text: '★ Таланты' })]),
-      talentsBlock(build),
-    ]));
-
     if (build.mode === 'rr' || (build.neutrals || []).length) {
       main.appendChild(h('div.panel', [
         h('div.panel-title', [h('span', { text: '🍃 Нейтральные предметы' })]),
@@ -342,30 +329,54 @@
     drawVote();
 
     /* ── комментарии ── */
-    const commentsHost = h('div.panel', [
-      h('div.panel-title', [h('span', { text: `💬 Обсуждение (${comments.length})` })]),
+    const commentsHost = h('div.panel');
+    const headRow = h('div.panel-title', [
+      h('span', { text: `💬 Обсуждение (${comments.filter(c => !c.pending).length})` }),
+      h('div.tools', store.isAdmin()
+        ? h('button.btn.btn-sm.btn-danger', {
+          type: 'button', text: 'Очистить обсуждение',
+          onclick: () => clearComments(build, () => renderDetail(host, params)),
+        })
+        : null),
     ]);
+    commentsHost.appendChild(headRow);
     const list = h('div.msg-list');
     commentsHost.appendChild(list);
     for (const c of comments) list.appendChild(commentNode(build, c, () => renderDetail(host, params)));
 
     const composer = h('div.composer');
     if (store.me) {
-      const area = h('textarea.textarea', { placeholder: 'Напиши, что думаешь о билде…', maxlength: 2000 });
-      composer.appendChild(area);
-      composer.appendChild(h('div.composer-row', h('button.btn.btn-primary', {
-        type: 'button', text: 'Отправить',
-        onclick: async e => {
-          const body = area.value.trim();
-          if (!body) { ui.err('Пустое сообщение не отправится'); return; }
-          e.target.disabled = true;
-          const r = await api.post(`/builds/${build.id}/comments`, { body: { body } });
-          e.target.disabled = false;
-          if (!r.ok) { ui.apiError(r, 'Комментарий не отправился'); return; }
-          ui.ok('Комментарий добавлен');
-          renderDetail(host, params);
-        },
-      })));
+      const chatBan = store.me.chat_ban;
+      if (chatBan && chatBan.active) {
+        composer.appendChild(h('div.help-note.ban-note', [
+          h('b', { text: '⚠️ Чат заблокирован' }),
+          ' — ',
+          chatBan.forever
+            ? 'банить больше нечего: ты не можешь писать комментарии.'
+            : `ты сможешь снова писать ${ui.ago(chatBan.until)}.`,
+          chatBan.reason ? h('div', { style: { marginTop: '4px' }, text: `Причина: ${chatBan.reason}` }) : null,
+        ]));
+      } else {
+        const area = h('textarea.textarea', { placeholder: 'Напиши, что думаешь о билде…', maxlength: 2000 });
+        composer.appendChild(area);
+        composer.appendChild(h('div.composer-row', h('button.btn.btn-primary', {
+          type: 'button', text: 'Отправить',
+          onclick: async e => {
+            const body = area.value.trim();
+            if (!body) { ui.err('Пустое сообщение не отправится'); return; }
+            e.target.disabled = true;
+            const r = await api.post(`/builds/${build.id}/comments`, { body: { body } });
+            e.target.disabled = false;
+            if (!r.ok) { ui.apiError(r, 'Комментарий не отправился'); return; }
+            if (r.data && r.data.pending) {
+              ui.ok('Сообщение отправлено на проверку и появится после одобрения администратором');
+            } else {
+              ui.ok('Комментарий добавлен');
+            }
+            renderDetail(host, params);
+          },
+        })));
+      }
     } else {
       composer.appendChild(h('div.help-note', [
         h('a', { href: '#/login', text: 'Войди', style: { color: 'var(--gold-2)' } }),
@@ -378,14 +389,28 @@
     host.appendChild(h('div.build-layout', [main, side]));
   }
 
+  async function clearComments(build, onDone) {
+    const yes = await ui.confirm({
+      title: 'Очистить обсуждение?',
+      text: `Все комментарии под «${build.title}» будут скрыты для всех. Отменить нельзя.`,
+      okLabel: 'Очистить', kind: 'danger',
+    });
+    if (!yes) return;
+    const res = await api.post(`/builds/${build.id}/comments/clear`, { body: { reason: 'очищено админом' } });
+    if (!res.ok) { ui.apiError(res, 'Не удалось очистить'); return; }
+    ui.ok('Обсуждение очищено');
+    if (onDone) onDone();
+  }
+
   function commentNode(build, c, reload) {
-    return h('div.msg' + (store.me && store.me.id === c.author.id ? '.mine' : ''), [
+    return h('div.msg' + (c.pending ? '.pending' : '') + (store.me && store.me.id === c.author.id ? '.mine' : ''), [
       auth.avatarNode(c.author, 'avatar-sm'),
       h('div', { style: { flex: '1', minWidth: '0' } }, [
         h('div.head', [
           h('span.nick', { text: c.author.nickname }),
           auth.roleBadge(c.author),
           h('span.time', { text: c.ago }),
+          c.pending ? h('span.badge.badge-pending', { text: '⏳ на проверке' }) : null,
           h('div.tools', [
             c.can_delete ? h('button.icon-btn', {
               type: 'button', title: 'Удалить', text: '✕', style: { fontSize: '12px' },
@@ -450,5 +475,5 @@
   }
 
   window.views = window.views || {};
-  window.views.builds = { renderList, renderDetail, itemsBlock, skillsBlock, talentsBlock, neutralsBlock, deleteBuild, verifyBuild };
+  window.views.builds = { renderList, renderDetail, itemsBlock, skillsBlock, neutralsBlock, deleteBuild, verifyBuild };
 })();

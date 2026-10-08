@@ -17,6 +17,7 @@ const {
 const { requireAdmin, destroyUserSessions, hashPassword } = require('../auth');
 const { wrap } = require('../http');
 const { MODERATION, resolveContent } = require('../notify');
+const { chatBanPayload } = require('../modfilter');
 
 const { FLAG_TARGETS, FLAG_REASONS } = require('./users');
 
@@ -62,6 +63,8 @@ module.exports = function adminRoutes(ctx) {
         threads_confirmed: one("select count(*) as c from threads where is_deleted = 0 and status = 'confirmed'"),
         builds_unverified: one('select count(*) as c from builds where is_draft = 0 and verified_at is null'),
         coach_applications: one(`select count(*) as c from users where role = 'user' and bio ${likes} '%coach%'`),
+        comments_pending: one("select count(*) as c from build_comments where moderation = 'pending' and is_deleted = 0")
+          + one("select count(*) as c from posts where moderation = 'pending' and is_deleted = 0"),
       },
     });
   }));
@@ -83,7 +86,8 @@ module.exports = function adminRoutes(ctx) {
       where.push(bool(req.query.banned) ? 'is_banned = 1' : 'is_banned = 0');
     }
     const rows = db.prepare(`
-      select id, username, nickname, avatar, role, bio, contact, is_banned, ban_reason, created_at, last_seen_at
+      select id, username, nickname, avatar, role, bio, contact, is_banned, ban_reason,
+             chat_ban_until, chat_ban_forever, chat_ban_reason, created_at, last_seen_at
         from users where ${where.join(' and ')} order by created_at desc limit ? offset ?
     `).all(...params, size, offset);
     const total = db.prepare(`select count(*) as c from users where ${where.join(' and ')}`).get(...params).c;
@@ -95,7 +99,7 @@ module.exports = function adminRoutes(ctx) {
       byUser.get(s.user_id).push(s.scope);
     }
     res.json({
-      items: rows.map(u => ({ ...u, coach_scopes: byUser.get(u.id) || [], ago: timeAgo(u.created_at) })),
+      items: rows.map(u => ({ ...u, coach_scopes: byUser.get(u.id) || [], ago: timeAgo(u.created_at), chat_ban: chatBanPayload(db, u.id) })),
       total, page, per_page: size, pages: Math.max(1, Math.ceil(total / size)),
     });
   }));
@@ -141,6 +145,34 @@ module.exports = function adminRoutes(ctx) {
     if (ban) destroyUserSessions(db, id);
     log(db, req.user.id, ban ? 'ban' : 'unban', 'user', id, reason);
     res.json({ ok: true, banned: ban });
+  }));
+
+  // Чат-бан: нельзя писать комментарии к билдам и посты в ветках.
+  // Читать и голосовать — можно. Срок: день / неделя / год / навсегда.
+  // Снять бан — тем же эндпоинтом с banned: false.
+  const CHAT_BAN_MS = { day: 86400000, week: 7 * 86400000, year: 365 * 86400000 };
+  router.post('/users/:id/chat-ban', wrap((req, res) => {
+    const id = Number(req.params.id);
+    const u = db.prepare('select * from users where id = ?').get(id);
+    if (!u) throw notFound('Пользователь не найден');
+    if (u.id === req.user.id) throw bad('Нельзя забанить самого себя');
+    if (u.role === ROLES.ADMIN) throw bad('Нельзя банить администратора');
+
+    if (bool(req.body.banned, true) === false) {
+      db.prepare('update users set chat_ban_until = null, chat_ban_forever = 0, chat_ban_reason = ? where id = ?').run('', id);
+      log(db, req.user.id, 'chat_unban', 'user', id,
+           str(req.body.reason, { field: 'причина', max: 400, required: false }));
+      return res.json({ ok: true, chat_ban: { active: false } });
+    }
+
+    const duration = oneOf(req.body.duration, ['day', 'week', 'year', 'forever'], { field: 'срок бана' });
+    const reason = str(req.body.reason, { field: 'причина', max: 400 });
+    const forever = duration === 'forever';
+    const until = forever ? null : new Date(Date.now() + CHAT_BAN_MS[duration]).toISOString();
+    db.prepare('update users set chat_ban_until = ?, chat_ban_forever = ?, chat_ban_reason = ? where id = ?')
+      .run(until, forever ? 1 : 0, reason, id);
+    log(db, req.user.id, 'chat_ban', 'user', id, `${duration}: ${reason}`);
+    res.json({ ok: true, chat_ban: { active: true, until, forever, reason } });
   }));
 
   router.post('/users/:id/password', wrap((req, res) => {
@@ -335,6 +367,74 @@ module.exports = function adminRoutes(ctx) {
     }
     if (ctx.mailer) ctx.mailer.flushSoon(db);
     res.json({ ok: true, done });
+  }));
+
+  /* ── очередь комментариев (авто-модерация) ─────────────────────────────
+     Комментарии к билдам и посты в ветках, помеченные фильтром, не
+     публикуются сами: они ждут решения администратора. Одобрить — или
+     отклонить (мягко скрыть). Потом они попадают во вкладку «решённые». */
+  const COMMENT_WHERE = {
+    pending: t => `${t}.moderation = 'pending' and ${t}.is_deleted = 0`,
+    done: t => `(${t}.moderation != 'pending' or ${t}.is_deleted = 1)`,
+  };
+
+  router.get('/comments', wrap((req, res) => {
+    const { page, size, offset } = paging(req.query, { defaultSize: 20, maxSize: 100 });
+    const status = oneOf(req.query.status, Object.keys(COMMENT_WHERE), { field: 'статус', def: 'pending' });
+    const where = COMMENT_WHERE[status];
+
+    const rows = db.prepare(`
+      select * from (
+        select c.id, 'comment' as kind, c.body, c.moderation, c.created_at, c.is_deleted,
+               null as parent_id,
+               c.build_id as target_id, b.title as target_title,
+               ${db.dialect === 'pg' ? "('/builds/' || c.build_id) as target_route" : "('/builds/' || c.build_id) as target_route"},
+               u.id as author_id, u.nickname as author_nickname, u.username as author_username
+          from build_comments c
+          join users u on u.id = c.author_id
+          left join builds b on b.id = c.build_id
+         where ${where('c')}
+        union all
+        select p.id, 'post' as kind, p.body, p.moderation, p.created_at, p.is_deleted,
+               p.parent_id,
+               p.thread_id as target_id, t.title as target_title,
+               ${db.dialect === 'pg' ? "('/threads/' || p.thread_id) as target_route" : "('/threads/' || p.thread_id) as target_route"},
+               u.id as author_id, u.nickname as author_nickname, u.username as author_username
+          from posts p
+          join users u on u.id = p.author_id
+          left join threads t on t.id = p.thread_id
+         where ${where('p')}
+      ) q order by q.created_at desc limit ? offset ?
+    `).all(size, offset);
+
+    const total = db.prepare(`
+      select
+        (select count(*) from build_comments where ${where('build_comments')})
+        + (select count(*) from posts where ${where('posts')}) as c
+    `).get().c;
+
+    res.json({
+      items: rows.map(r => ({ ...r, ago: timeAgo(r.created_at) })),
+      total, page, per_page: size, pages: Math.max(1, Math.ceil(total / size)),
+    });
+  }));
+
+  // Одобрить или отклонить одно сообщение из очереди.
+  router.post('/comments/decide', wrap((req, res) => {
+    const kind = oneOf(req.body.kind, ['comment', 'post'], { field: 'тип' });
+    const decision = oneOf(req.body.decision, ['approve', 'reject'], { field: 'решение' });
+    const table = kind === 'comment' ? 'build_comments' : 'posts';
+    const row = db.prepare(`select * from ${table} where id = ?`).get(Number(req.body.id));
+    if (!row) throw notFound('Сообщение не найдено');
+
+    if (decision === 'approve') {
+      db.prepare(`update ${table} set moderation = ? where id = ?`).run(MODERATION.APPROVED, row.id);
+    } else {
+      db.prepare(`update ${table} set is_deleted = 1 where id = ?`).run(row.id);
+    }
+    log(db, req.user.id, `${decision}_${kind}`, kind, row.id,
+        str(req.body.note, { field: 'комментарий', max: 500, required: false }));
+    res.json({ ok: true, decision });
   }));
 
   /* ── очередь писем ──────────────────────────────────────────────────── */

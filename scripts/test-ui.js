@@ -811,11 +811,13 @@ async function main() {
     const mine = (list.items || []).find(b => b.title === 'Билд с кастомным предметом');
     assert(mine, 'билда нет в списке');
     const host = await renderRoute('/builds/' + mine.id);
-    // Название предмета теперь живёт в тултипе иконки, а не в тексте страницы.
-    const slot = [...host.querySelectorAll('.slot')].find(s =>
-      (s.getAttribute('title') || '').includes('Kast'));
-    assert(slot, 'предмет не показан на странице билда');
-    return 'предмет виден иконкой в карточке сборки';
+    // Название предмета показывается текстом под иконкой (слот .nm).
+    const slot = [...host.querySelectorAll('.slot')].find(s => {
+      const nm = s.querySelector('.nm');
+      return nm && nm.textContent.includes('Kast');
+    });
+    assert(slot, 'предмет с названием не показан на странице билда');
+    return 'название предмета показано под иконкой';
   });
 
   await check('в билде больше шести предметов (съеденные)', async () => {
@@ -850,11 +852,26 @@ async function main() {
     assert(built && built.id, 'билд не создан: ' + JSON.stringify(built));
     const host = await renderRoute('/builds/' + built.id);
     const shown = sandbox.picker.displayName(pool);
-    // Скиллы на странице — иконки, имя держится в tooltip карточки.
-    const cell = [...host.querySelectorAll('.sk')].find(s =>
-      (s.getAttribute('title') || '').includes(shown));
-    assert(cell, 'навык пула не показан: ' + host.textContent.slice(0, 200));
-    return shown;
+    // Навык подписан текстом под иконкой (ячейка .sk .nm).
+    const cell = [...host.querySelectorAll('.sk')].find(s => {
+      const nm = s.querySelector('.nm');
+      return nm && nm.textContent.includes(shown);
+    });
+    assert(cell, 'навык пула не показан: ' + host.textContent.slice(0, 300));
+    return shown + ' — подпись под иконкой';
+  });
+
+  await check('на странице билда и в редакторе нет талантов', async () => {
+    const list = await (await fetch(API + '/builds?author=' + username)).json();
+    const mine = (list.items || []).find(b => b.title === 'Билд на 9 предметов');
+    assert(mine, 'билда нет в списке');
+    const view = await renderRoute('/builds/' + mine.id);
+    const editor = await renderRoute('/builds/' + mine.id + '/edit');
+    return ['страница', 'редактор'].map((x, i) => {
+      const text = i === 0 ? view.textContent : editor.textContent;
+      assert(!/талант/i.test(text), `в ${x} остались упоминания талантов`);
+      return x + ' без талантов';
+    }).join(' · ');
   });
 
   await check('пул CHC доступен и без героя', async () => {
@@ -1590,7 +1607,7 @@ async function main() {
   await sandbox.store.restoreSession();
   assert(sandbox.store.isAdmin(), 'админка не восстановилась после restoreSession');
 
-  for (const tab of ['?tab=overview', '?tab=users', '?tab=flags', '?tab=threads', '?tab=content', '?tab=log']) {
+  for (const tab of ['?tab=overview', '?tab=users', '?tab=flags', '?tab=threads', '?tab=content', '?tab=log', '?tab=comments']) {
     await check('вкладка' + tab, async () => {
       const host = await renderRoute('/admin' + tab);
       // планка выше, чем у «шапки + табов»: значит содержимое реально доехало

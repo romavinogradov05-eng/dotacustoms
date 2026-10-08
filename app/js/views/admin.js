@@ -9,6 +9,7 @@
   const TABS = [
     ['overview', 'Обзор'],
     ['queue', 'Очередь'],
+    ['comments', 'Комментарии'],
     ['reports', 'Заявки'],
     ['users', 'Пользователи'],
     ['flags', 'Жалобы'],
@@ -50,6 +51,7 @@
         overview: drawOverview, users: drawUsers, flags: drawFlags,
         threads: drawThreads, content: drawContent, log: drawLog,
         queue: c => window.adminExtra.drawQueue(c, query),
+        comments: c => window.adminExtra.drawComments(c, query),
         reports: c => window.adminExtra.drawReports(c, query),
         share: c => window.adminExtra.drawShare(c),
         mail: c => window.adminExtra.drawMail(c),
@@ -109,6 +111,7 @@
         stat(o.queue.threads_open, 'открытых багов', 'threads'),
         stat(o.queue.threads_confirmed, 'подтверждённых', 'threads'),
         stat(o.queue.builds_unverified, 'билдов без метки', 'builds'),
+        stat(o.queue.comments_pending, 'сообщений на проверке', 'comments'),
       ]),
     ]));
 
@@ -203,6 +206,9 @@
               h('div', { style: { fontSize: '11.5px', color: 'var(--text-mute)' }, text: '@' + u.username }),
             ]),
             u.is_banned ? h('span.badge.badge-red', { text: 'БАН' }) : null,
+            u.chat_ban && u.chat_ban.active ? h('span.badge.badge-pending', {
+              text: 'ЧАТ', title: u.chat_ban.forever ? 'чат заблокирован навсегда' : 'чат заблокирован до ' + ui.ago(u.chat_ban.until),
+            }) : null,
           ])),
           h('td', auth.roleBadge(u) || h('span.badge.badge-grey', { text: 'Игрок' })),
           h('td', h('div.pill-list', (u.coach_scopes || []).length
@@ -217,6 +223,11 @@
               type: 'button', text: u.is_banned ? 'Разбанить' : 'Забанить',
               onclick: () => banDialog(u, draw),
             }),
+            u.role !== 'admin' ? h('button.btn.btn-sm' + (u.chat_ban && u.chat_ban.active ? '' : '.btn-warn'), {
+              type: 'button', text: 'Чат',
+              title: u.chat_ban && u.chat_ban.active ? 'Снять чат-бан' : 'Запретить писать в чат',
+              onclick: () => chatBanDialog(u, draw),
+            }) : null,
             h('button.icon-btn', {
               type: 'button', title: 'Сбросить пароль', text: '🔑', style: { fontSize: '11px' },
               onclick: () => passwordDialog(u, draw),
@@ -325,6 +336,73 @@
             const res = await api.post(`/admin/users/${user.id}/password`, { body: { password: input.value } });
             if (!res.ok) { ui.apiError(res, 'Не получилось'); return false; }
             ui.ok('Пароль сброшен');
+            onDone();
+          },
+        },
+      ],
+    });
+  }
+
+  function chatBanDialog(user, onDone) {
+    const ban = user.chat_ban || { active: false };
+    if (ban.active) {
+      ui.modal({
+        title: 'Снять чат-бан: ' + user.nickname,
+        body: h('div', [
+          h('div.help-note', {
+            text: ban.forever
+              ? `Чат заблокирован навсегда. Причина: ${ban.reason || 'не указана'}.`
+              : `Чат заблокирован до ${ui.ago(ban.until)}. Причина: ${ban.reason || 'не указана'}.`,
+          }),
+          h('div.help-note', { text: 'После снятия игрок снова сможет писать комментарии и посты в ветках.' }),
+        ]),
+        actions: [
+          { label: 'Отмена', kind: 'ghost' },
+          {
+            label: 'Снять чат-бан', kind: 'primary',
+            onClick: async () => {
+              const res = await api.post(`/admin/users/${user.id}/chat-ban`, { body: { banned: false, reason: '' } });
+              if (!res.ok) { ui.apiError(res, 'Не получилось'); return false; }
+              ui.ok('Чат-бан снят');
+              onDone();
+            },
+          },
+        ],
+      });
+      return;
+    }
+
+    const options = [
+      ['day', '1 день'], ['week', '1 неделя'], ['year', '1 год'], ['forever', 'Навсегда'],
+    ];
+    let picked = 'week';
+    const radios = h('div.choices', { style: { flexWrap: 'wrap' } });
+    for (const [key, label] of options) {
+      const input = h('input', { type: 'radio', name: 'chatban-dur' });
+      if (key === picked) input.checked = true;
+      input.addEventListener('change', () => { picked = key; });
+      radios.appendChild(h('label.switch', [input, h('span.track'), h('span.label', { text: label })]));
+    }
+    const reason = h('textarea.textarea', { placeholder: 'За что запрещаем писать в чат', maxlength: 400, rows: 3 });
+    ui.modal({
+      title: 'Чат-бан: ' + user.nickname,
+      body: h('div', [
+        h('div.help-note', {
+          text: 'Запрет на комментарии под билдами и посты в ветках. Читать и голосовать игрок сможет.',
+        }),
+        h('div.field', [h('label', { text: 'Срок' }), radios]),
+        h('div.field', [h('label', { text: 'Причина' }), reason]),
+      ]),
+      actions: [
+        { label: 'Отмена', kind: 'ghost' },
+        {
+          label: 'Забанить чат', kind: 'danger',
+          onClick: async () => {
+            const body = { banned: true, duration: picked, reason: reason.value.trim() };
+            if (!body.reason) { ui.err('Укажи причину бана'); return false; }
+            const res = await api.post(`/admin/users/${user.id}/chat-ban`, { body });
+            if (!res.ok) { ui.apiError(res, 'Не получилось'); return false; }
+            ui.ok('Чат-бан выдан');
             onDone();
           },
         },

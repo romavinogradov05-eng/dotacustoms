@@ -220,6 +220,8 @@ module.exports = function topRoutes(ctx) {
     if (req.body.description !== undefined) set.description = str(req.body.description, { field: 'описание', max: LIMITS.descriptionMax, required: false });
     if (req.body.patch !== undefined) set.patch = str(req.body.patch, { field: 'патч', max: 12, required: false });
     if (req.body.is_draft !== undefined) set.is_draft = bool(req.body.is_draft) ? 1 : 0;
+    if (req.body.mode !== undefined) set.mode = oneOf(req.body.mode, MODE_KEYS, { field: 'режим' });
+    if (req.body.kind !== undefined) set.kind = oneOf(req.body.kind, TOP_KIND_KEYS, { field: 'вид топа' });
     if (Object.keys(set).length) {
       set.updated_at = nowIso();
       const cols = Object.keys(set).map(k => `${k} = ?`).join(', ');

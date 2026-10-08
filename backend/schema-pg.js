@@ -25,6 +25,9 @@ create table if not exists users (
   contact       text not null default '',
   is_banned     integer not null default 0,
   ban_reason    text not null default '',
+  chat_ban_until   text,
+  chat_ban_forever integer not null default 0,
+  chat_ban_reason  text not null default '',
   created_at    text not null,
   last_seen_at  text,
   email         text not null default ''
@@ -82,7 +85,6 @@ create index if not exists idx_builds_mode  on builds(mode, is_draft, created_at
 create index if not exists idx_builds_hero  on builds(hero_id);
 create index if not exists idx_builds_auth  on builds(author_id, created_at desc);
 create index if not exists idx_builds_top   on builds(verified_at desc, created_at desc);
-create index if not exists idx_builds_moderation on builds(moderation, created_at desc);
 
 create table if not exists build_votes (
   build_id   integer not null references builds(id) on delete cascade deferrable,
@@ -99,6 +101,7 @@ create table if not exists build_comments (
   build_id    integer not null references builds(id) on delete cascade deferrable,
   author_id   integer not null references users(id) on delete cascade deferrable,
   body        text not null,
+  moderation  text not null default 'approved', -- approved | pending (на проверке)
   created_at  text not null,
   edited_at   text,
   is_deleted  integer not null default 0
@@ -123,7 +126,6 @@ create table if not exists meta_tops (
   moderation  text not null default 'approved'
 );
 create index if not exists idx_tops_mode on meta_tops(mode, kind, is_draft, created_at desc);
-create index if not exists idx_tops_moderation  on meta_tops(moderation, created_at desc);
 
 create table if not exists meta_top_entries (
   id      serial primary key,
@@ -175,6 +177,7 @@ create table if not exists posts (
   author_id   integer not null references users(id) on delete cascade deferrable,
   parent_id   integer references posts(id) on delete cascade deferrable,
   body        text not null,
+  moderation  text not null default 'approved', -- approved | pending (на проверке)
   created_at  text not null,
   edited_at   text,
   is_deleted  integer not null default 0

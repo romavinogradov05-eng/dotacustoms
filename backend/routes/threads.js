@@ -14,8 +14,10 @@ const {
 const {
   str, int, oneOf, bool, bad, notFound, forbidden, nowIso, paging, timeAgo,
 } = require('../util');
-const { requireAuth, requireStaff, isCoachFor } = require('../auth');
+const { requireAuth, requireStaff, requireAdmin, isCoachFor } = require('../auth');
 const { wrap } = require('../http');
+const { MODERATION, notifyAdmins } = require('../notify');
+const { assertCanChat, moderateText } = require('../modfilter');
 
 const STAFF = [ROLES.ADMIN, ROLES.COACH];
 
@@ -99,6 +101,7 @@ function postPayload(db, p, viewer, threadLocked) {
     },
     can_edit: !!viewer && !threadLocked && (viewer.id === p.author_id || viewer.role === ROLES.ADMIN),
     can_delete: !!viewer && (viewer.id === p.author_id || viewer.role === ROLES.ADMIN),
+    pending: p.moderation === MODERATION.PENDING,
   };
 }
 
@@ -185,8 +188,13 @@ module.exports = function threadRoutes(ctx) {
     if (!t) throw notFound('Ветка не найдена');
     db.prepare('update threads set views = views + 1 where id = ?').run(t.id);
 
-    const posts = db.prepare(`${SELECT_POST} where p.thread_id = ? order by p.created_at asc`)
-      .all(t.id).map(p => postPayload(db, p, req.user, !!t.is_locked));
+    // Публичное — только одобренные сообщения; админ видит ещё и pending.
+    const seePending = !!req.user && req.user.role === ROLES.ADMIN;
+    const posts = db.prepare(`
+      ${SELECT_POST} where p.thread_id = ? and p.is_deleted = 0
+        ${seePending ? '' : `and p.moderation = '${MODERATION.APPROVED}'`}
+      order by p.created_at asc
+    `).all(t.id).map(p => postPayload(db, p, req.user, !!t.is_locked));
 
     res.json({ thread: threadPayload(db, t, req.user), posts });
   }));
@@ -295,6 +303,7 @@ module.exports = function threadRoutes(ctx) {
     const t = db.prepare('select * from threads where id = ? and is_deleted = 0').get(Number(req.params.id));
     if (!t) throw notFound('Ветка не найдена');
     if (t.is_locked && req.user.role !== ROLES.ADMIN) throw forbidden('Ветка закрыта для новых сообщений');
+    assertCanChat(db, req.user);
     const body = str(req.body.body, { field: 'сообщение', min: 1, max: LIMITS.bodyMax });
     const parentId = req.body.parent_id
       ? int(req.body.parent_id, { field: 'ответ на', min: 1, required: false }) : null;
@@ -302,11 +311,37 @@ module.exports = function threadRoutes(ctx) {
       const p = db.prepare('select thread_id from posts where id = ?').get(parentId);
       if (!p || p.thread_id !== t.id) throw bad('Сообщение, на которое ты отвечаешь, не найдено');
     }
+    // Приемлемость решает фильтр, публикует администратор. Помеченное
+    // уходит в очередь в админке, автору показываем «отправлено на проверку».
+    const verdict = moderateText(body);
+    const moderation = verdict.flagged ? MODERATION.PENDING : MODERATION.APPROVED;
     const info = db.prepare(
-      'insert into posts (thread_id, author_id, parent_id, body, created_at) values (?,?,?,?,?)'
-    ).run(t.id, req.user.id, parentId, body, nowIso());
+      'insert into posts (thread_id, author_id, parent_id, body, moderation, created_at) values (?,?,?,?,?,?)'
+    ).run(t.id, req.user.id, parentId, body, moderation, nowIso());
+    if (moderation === MODERATION.PENDING) {
+      notifyAdmins(db, {
+        kind: 'moderation',
+        title: 'Сообщение в ветке ждёт проверки',
+        body: `Возможно неуместное сообщение от ${req.user.nickname} в «${t.title}»: ${verdict.reasons.join('; ')}.`,
+        link: '/admin?tab=comments',
+        actorId: req.user.id,
+      });
+    }
     db.prepare('update threads set updated_at = ? where id = ?').run(nowIso(), t.id);
-    res.status(201).json({ id: Number(info.lastInsertRowid) });
+    res.status(201).json({ id: Number(info.lastInsertRowid), moderation, pending: moderation === MODERATION.PENDING });
+  }));
+
+  // Удалить все сообщения из ветки — только администратор.
+  router.post('/:id/posts/clear', requireAdmin, wrap((req, res) => {
+    const id = Number(req.params.id);
+    if (!db.prepare('select id from threads where id = ?').get(id)) throw notFound('Ветка не найдена');
+    const info = db.prepare('update posts set is_deleted = 1 where thread_id = ? and is_deleted = 0').run(id);
+    db.prepare(`
+      insert into mod_log (actor_id, action, target_type, target_id, reason, created_at)
+      values (?,?,?,?,?,?)
+    `).run(req.user.id, 'clear_posts', 'thread', id,
+      str(req.body?.reason, { field: 'причина', max: 300, required: false }), nowIso());
+    res.json({ ok: true, cleared: Number(info.changes) });
   }));
 
   router.patch('/:id/posts/:postId', requireAuth, wrap((req, res) => {
@@ -315,8 +350,24 @@ module.exports = function threadRoutes(ctx) {
     if (!p) throw notFound('Сообщение не найдено');
     if (p.author_id !== req.user.id && req.user.role !== ROLES.ADMIN) throw forbidden('Это не твоё сообщение');
     const body = str(req.body.body, { field: 'сообщение', min: 1, max: LIMITS.bodyMax });
-    db.prepare('update posts set body = ?, edited_at = ? where id = ?').run(body, nowIso(), p.id);
-    res.json({ ok: true });
+    // Правка тоже проходит фильтр: иначе можно было бы отредактировать уже
+    // одобренное сообщение и «протащить» неприемлемый текст мимо очереди.
+    // Находившееся в очереди сообщение не публикуется само от чистки текста.
+    const wasPending = (p.moderation || MODERATION.APPROVED) === MODERATION.PENDING;
+    const verdict = moderateText(body);
+    const moderation = wasPending || verdict.flagged ? MODERATION.PENDING : MODERATION.APPROVED;
+    db.prepare('update posts set body = ?, edited_at = ?, moderation = ? where id = ?').run(body, nowIso(), moderation, p.id);
+    if (verdict.flagged) {
+      const t = db.prepare('select title from threads where id = ?').get(p.thread_id);
+      notifyAdmins(db, {
+        kind: 'moderation',
+        title: 'Изменённое сообщение ждёт проверки',
+        body: `Правка от ${req.user.nickname} в ветке «${t ? t.title : ''}» помечена: ${verdict.reasons.join('; ')}.`,
+        link: '/admin?tab=comments',
+        actorId: req.user.id,
+      });
+    }
+    res.json({ ok: true, moderation });
   }));
 
   router.delete('/:id/posts/:postId', requireAuth, wrap((req, res) => {

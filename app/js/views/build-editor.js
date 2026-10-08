@@ -13,7 +13,6 @@
   const C = () => store.config.limits || {};
   const MAX_ITEMS = () => store.limit('maxItems', 6);
   const MAX_SKILLS = () => store.limit('maxSkills', 20);
-  const MAX_TALENTS = () => store.limit('maxTalents', store.TALENT_LEVELS.length);
   const MAX_NEUTRALS = () => store.limit('maxNeutrals', 12);
 
   /** Пустая модель билда. */
@@ -99,7 +98,7 @@
       h('div', [
         h('h1', { text: isEdit ? 'Правка билда' : 'Новый билд' }),
         h('div.sub', {
-          text: 'Накидай предметы, скиллы из пула CHC, таланты и нейтралки. Герой необязателен. Черновик видишь только ты.',
+          text: 'Накидай предметы, скиллы из пула CHC и нейтралки. Герой необязателен. Черновик видишь только ты.',
         }),
       ]),
       h('div.btn-row', [
@@ -215,9 +214,8 @@
     drawHero();
 
     function drawHeroMeta() {
-      // смена героя сбрасывает скиллы и таланты — они принадлежат герою
+      // смена героя сбрасывает скиллы — они принадлежат герою
       drawSkills();
-      drawTalents();
     }
 
     /* предметы: 6 снаряжения + съеденные (Aghanim's Shard, Moon Shards) —
@@ -233,7 +231,7 @@
         grid.appendChild(h('div.slot', [
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', flex: '1', minWidth: '0', cursor: 'pointer' },
             onclick: e => { e.stopPropagation(); picker.showCard(item, 'item'); } }, [
-            ui.dotaIcon(store.icon(item.img)),
+            ui.dotaIcon(store.icon(item.img), null, true),
             h('div.info', [
               h('span.nm', { text: picker.displayName(item) }),
               h('span.sub', { text: item.sub || entry.note || picker.costText(item) || '' }),
@@ -388,72 +386,6 @@
     }
     drawSkills();
 
-    /* таланты */
-    const talentsHost = h('div');
-    function drawTalents() {
-      clear(talentsHost);
-      const hero = model.hero_id ? store.heroById.get(model.hero_id) : null;
-      if (!hero) {
-        talentsHost.appendChild(h('div.help-note', { text: 'Сначала выбери героя — таланты подтянутся автоматически.' }));
-        return;
-      }
-      const groups = store.heroTalents(hero.id);
-      if (!groups.some(g => g.length)) {
-        talentsHost.appendChild(h('div.help-note', { text: 'Таланты этого героя не найдены в справочнике.' }));
-        return;
-      }
-      const levels = store.TALENT_LEVELS;
-      const list = h('div.talent-list');
-      for (let i = 0; i < MAX_TALENTS(); i++) {
-        const lvl = levels[i];
-        const pool = groups[i] || [];
-        const talentId = model.talents[i];
-        const talent = talentId ? store.abilityById.get(talentId) : null;
-        const row = h('div.talent-row' + (talent ? '.chosen' : ''));
-        row.appendChild(h('span.lvl', { text: `${lvl} ур.` }));
-        if (talent) {
-          row.appendChild(h('span.txt', { text: picker.displayName(talent), style: { flex: '1', color: 'var(--text)' } }));
-          row.appendChild(h('button.icon-btn', {
-            type: 'button', title: 'Убрать', text: '✕', style: { fontSize: '11px' },
-            onclick: () => { model.talents[i] = null; drawTalents(); },
-          }));
-        } else if (pool.length) {
-          row.appendChild(h('button.btn.btn-sm.btn-ghost', {
-            type: 'button', text: '＋ выбрать талант',
-            onclick: () => picker.pickTalent({
-              heroId: hero.id, picked: model.talents.filter(Boolean), onlyLevel: lvl,
-              onPick: t => { model.talents[i] = t.id; drawTalents(); },
-            }),
-          }));
-        } else {
-          row.appendChild(h('span.txt', { text: 'нет вариантов — впиши вручную ниже' }));
-        }
-        list.appendChild(row);
-      }
-      talentsHost.appendChild(list);
-
-      // ручной выбор любого таланта героя (если раскладка не сошлась)
-      const all = store.heroTalents(hero.id).flat();
-      if (all.length) {
-        const sel = h('select.select', {
-          onchange: e => {
-            const id = Number(e.target.value);
-            if (!id) return;
-            const free = model.talents.findIndex(x => !x);
-            const at = free >= 0 ? free : 0;
-            model.talents[at] = id;
-            drawTalents();
-          },
-        }, [h('option', { value: '', text: 'Добавить талант вручную…' })]);
-        for (const t of all) {
-          if (model.talents.includes(t.id)) continue;
-          sel.appendChild(h('option', { value: String(t.id), text: picker.displayName(t) }));
-        }
-        talentsHost.appendChild(h('div.field', { style: { marginTop: '12px' } }, [sel]));
-      }
-    }
-    drawTalents();
-
     /* нейтралки */
     const neutralsHost = h('div');
     function drawNeutrals() {
@@ -472,7 +404,7 @@
         grid.appendChild(h('div.slot', [
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', flex: '1', minWidth: '0', cursor: 'pointer' },
             onclick: e => { e.stopPropagation(); picker.showCard(n, 'neutral'); } }, [
-            ui.dotaIcon(store.neutralIcon(n)),
+            ui.dotaIcon(store.neutralIcon(n), null, true),
             h('div.info', [
               h('span.nm', { text: n.name_en || n.name || '' }),
               h('span.sub', { text: entry.note || `тир ${n.tier}` }),
@@ -518,11 +450,6 @@
     main.appendChild(h('div.panel', [
       h('div.panel-title', [h('span', { text: `⚡ Скиллы (до ${MAX_SKILLS()})` })]),
       skillsHost,
-    ]));
-
-    main.appendChild(h('div.panel', [
-      h('div.panel-title', [h('span', { text: '★ Таланты' })]),
-      talentsHost,
     ]));
 
     main.appendChild(h('div.panel', [
@@ -577,9 +504,11 @@
         is_draft: model.is_draft,
         items: model.items,
         skills: model.skills,
-        talents: model.talents.filter(Boolean),
         neutrals: model.neutrals,
       };
+      // Таланты из UI убраны. Старым билдам их не шлём вообще (данные
+      // в базе не трогаем), новым — явно пустой список.
+      if (!isEdit) payload.talents = [];
 
       const res = isEdit
         ? await api.patch('/builds/' + model.id, { body: payload })

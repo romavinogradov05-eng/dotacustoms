@@ -59,7 +59,13 @@
         ]),
         h('div.spacer'),
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' } }, [
-          h('div.meta-row', [auth.roleBadge(user), user.is_banned ? h('span.badge.badge-red', { text: 'Забанен' }) : null]),
+          h('div.meta-row', [auth.roleBadge(user),
+            user.is_banned ? h('span.badge.badge-red', { text: 'Забанен' }) : null,
+            user.chat_ban && user.chat_ban.active ? h('span.badge.badge-pending', {
+              text: 'Чат-бан', title: user.chat_ban.forever
+                ? 'Чат заблокирован навсегда'
+                : 'Чат заблокирован до ' + ui.ago(user.chat_ban.until),
+            }) : null]),
           h('div.meta-row', [
             h('span', { text: `с нами ${user.joined_ago || '—'}` }),
             user.last_seen_ago ? h('span.dot', { text: '·' }) : null,

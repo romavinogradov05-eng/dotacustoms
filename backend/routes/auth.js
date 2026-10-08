@@ -10,6 +10,7 @@ const {
   hashPassword, verifyPassword, createSession, destroySession, coachScopes, requireAuth,
 } = require('../auth');
 const { wrap, rateLimit } = require('../http');
+const { chatBanPayload } = require('../modfilter');
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{2,19}$/;
 const RESERVED = new Set(['admin', 'administrator', 'root', 'system', 'dota', 'dotacustoms', 'moder', 'модератор']);
@@ -24,7 +25,10 @@ function profilePayload(db, user) {
          join builds b on b.id = bv.build_id
         where b.author_id = ? and b.is_draft = 0) as reputation
   `).get(user.id, user.id, user.id, user.id);
-  return { ...publicUser(user), coach_scopes: coachScopes(db, user), stats: counts };
+  return {
+    ...publicUser(user), coach_scopes: coachScopes(db, user), stats: counts,
+    chat_ban: chatBanPayload(db, user.id),
+  };
 }
 
 module.exports = function authRoutes(ctx) {

@@ -282,6 +282,7 @@ body::before {
 .badge-blue   { color: #9ec5e8; border-color: rgba(58, 110, 165, 0.5); background: var(--blue-bg); }
 .badge-purple { color: #d5b0f7; border-color: rgba(168, 85, 247, 0.5); background: var(--purple-bg); }
 .badge-grey   { color: var(--text-dim); border-color: var(--border); background: rgba(143, 138, 127, 0.08); }
+.badge-pending { color: var(--gold-2); border-color: rgba(240, 190, 90, 0.45); background: rgba(240, 190, 90, 0.10); }
 .badge-mode-chc { color: #f0a49c; border-color: rgba(214, 59, 47, 0.45); background: var(--red-bg); }
 .badge-mode-rr  { color: #8fd99f; border-color: rgba(78, 174, 98, 0.45); background: var(--green-bg); }
 .badge-tier-S { color: #f5d68a; border-color: rgba(232, 196, 126, 0.6); background: rgba(232, 196, 126, 0.12); }
@@ -376,7 +377,7 @@ body::before {
 .slot:hover { border-color: var(--border-bright); background: rgba(201, 160, 99, 0.06); }
 .slot.empty { border-style: dashed; color: var(--text-mute); justify-content: center; }
 .slot .icon {
-  width: 38px; height: 30px; object-fit: contain; flex: none;
+  width: 55px; height: 40px; object-fit: contain; flex: none;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
 }
 .slot .info { min-width: 0; display: flex; flex-direction: column; }
@@ -409,7 +410,7 @@ body::before {
   background: rgba(8, 10, 15, 0.6); border: 1px solid var(--border); border-radius: var(--radius);
 }
 .skill-order .sk .lvl { font-size: 10.5px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.6px; }
-.skill-order .sk .icon { width: 34px; height: 26px; object-fit: contain; }
+.skill-order .sk .icon { width: 40px; height: 40px; object-fit: contain; }
 .skill-order .sk .nm { font-size: 11.5px; color: var(--text-dim); text-align: center; line-height: 1.2; }
 
 /* ── Комментарии и сообщения (в стиле Discord) ────────────────────── */
@@ -420,6 +421,8 @@ body::before {
   border-radius: var(--radius); border-left: 3px solid var(--border);
 }
 .msg.mine { border-left-color: var(--gold); background: rgba(201, 160, 99, 0.05); }
+.msg.pending { border-left-color: var(--gold-2); background: rgba(240, 190, 90, 0.04); }
+.msg.pending .body { opacity: 0.75; }
 .msg.deleted { opacity: 0.5; font-style: italic; }
 .msg .body { font-size: 14px; line-height: 1.6; word-wrap: break-word; overflow-wrap: anywhere; }
 .msg .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -584,6 +587,10 @@ body::before {
   background: rgba(58, 110, 165, 0.09); border-left: 3px solid var(--blue); border-radius: 0 var(--radius) var(--radius) 0;
 }
 .help-note b { color: var(--gold-2); }
+.help-note.ban-note {
+  background: rgba(214, 59, 47, 0.08); border-left-color: var(--red);
+}
+.help-note.ban-note b { color: #f0a49c; }
 
 .choices { display: flex; gap: 6px; flex-wrap: wrap; }
 .choice {
@@ -788,6 +795,12 @@ body::before {
   font-size: 12.5px; color: var(--text-dim); margin-top: 5px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+.entry-quote {
+  font-size: 12.5px; color: var(--text); margin-top: 6px;
+  white-space: pre-wrap; word-break: break-word; max-height: 96px; overflow: auto;
+  background: rgba(0, 0, 0, 0.18); border: 1px dashed var(--border);
+  border-radius: 3px; padding: 7px 9px;
+}
 .queue-row .check { display: flex; align-items: center; flex: none; }
 .pager { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
 
@@ -872,8 +885,8 @@ body::before {
   font-size: 12.5px; color: var(--text); max-width: 260px;
   user-select: none;
 }
-.tl-card .icon { width: 38px; height: 30px; object-fit: contain; flex: none; }
-.tl-card .icon.round { width: 38px; height: 38px; border-radius: 50%; }
+.tl-card .icon { width: 55px; height: 40px; object-fit: contain; flex: none; }
+.tl-card .icon.round { width: 40px; height: 40px; border-radius: 50%; }
 .tl-card:hover { border-color: var(--border-bright); }
 .tl-card.dragging { opacity: 0.45; cursor: grabbing; }
 .tl-card.view { cursor: pointer; }

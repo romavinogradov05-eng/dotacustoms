@@ -348,5 +348,124 @@
     }
   }
 
-  window.adminExtra = { drawQueue, drawReports, drawShare, drawMail };
+  /* ══ проверка комментариев и постов веток ═══════════════════════════ */
+
+  // Очередь авто-модерации: здесь живут сообщения, задержанные фильтром
+  // (build_comments и posts). Одобрить = опубликовать, отклонить = скрыть.
+  async function drawComments(host, query) {
+    const state = { status: query.cstatus || 'pending', page: Number(query.cpage) || 1 };
+    const listHost = h('div');
+    const pager = h('div.pager');
+    const counter = h('div.field-hint', { style: { margin: '10px 0' } });
+    const statusTabs = h('div.tabs');
+
+    function drawTabs(total) {
+      clear(statusTabs);
+      for (const [key, title] of [['pending', 'На проверке'], ['done', 'Решённые']]) {
+        statusTabs.appendChild(h(`button.tab${state.status === key ? '.active' : ''}`, {
+          type: 'button',
+          text: key === 'pending' && total ? `${title} (${total})` : title,
+          onclick: () => { state.status = key; state.page = 1; load(); },
+        }));
+      }
+    }
+
+    host.appendChild(statusTabs);
+    host.appendChild(counter);
+    host.appendChild(listHost);
+    host.appendChild(pager);
+
+    async function load() {
+      clear(listHost);
+      clear(pager);
+      const res = await api.get(`/admin/comments?status=${state.status}&page=${state.page}`);
+      if (!res.ok) {
+        listHost.appendChild(common.empty({
+          icon: '⚠', title: 'Не получилось загрузить очередь',
+          text: (res.data && res.data.error) || 'Ошибка сервера',
+        }));
+        return;
+      }
+      const data = res.data;
+      drawTabs(data.total);
+      counter.textContent = data.total
+        ? `${data.total} ${ui.plural(data.total,
+            state.status === 'pending' ? 'сообщение' : 'решённое',
+            state.status === 'pending' ? 'сообщения' : 'решённых',
+            state.status === 'pending' ? 'сообщений' : 'решённых')}`
+        : '';
+
+      if (!data.items.length) {
+        listHost.appendChild(common.empty({
+          icon: '✅', title: state.status === 'pending' ? 'Всё проверено' : 'Пока пусто',
+          text: state.status === 'pending'
+            ? 'Фильтр ничего не задержал — все сообщения опубликованы.'
+            : 'Одобренные и отклонённые сообщения появятся здесь.',
+        }));
+        return;
+      }
+
+      for (const item of data.items) {
+        const kindBadge = item.kind === 'post'
+          ? h('span.badge.badge-grey', { text: 'ветка' })
+          : h('span.badge.badge-yellow', { text: 'билд' });
+        listHost.appendChild(h('div.queue-row', [
+          h('div.info', [
+            h('div.entry-title', [
+              kindBadge,
+              item.is_deleted ? h('span.badge.badge-red', { text: 'скрыто' }) : null,
+              item.moderation === 'pending' ? h('span.badge.badge-pending', { text: '⏳ ждёт' }) : null,
+            ]),
+            h('div.entry-sub', {
+              text: `${item.author_nickname} (@${item.author_username}) · ${item.ago}`
+                + (item.parent_id ? ' · ответ' : ''),
+            }),
+            h('div.entry-note', { text: `В «${item.target_title || '…'}»` }),
+            h('div.entry-quote', { text: item.body }),
+          ]),
+          h('div.btn-row', [
+            h('a.btn.btn-sm', { href: `#${item.target_route}`, text: 'Открыть' }),
+            h('button.btn.btn-sm.btn-primary', {
+              type: 'button', text: '✓', title: 'Опубликовать',
+              onclick: () => decide(item, 'approve'),
+            }),
+            h('button.btn.btn-sm.btn-danger', {
+              type: 'button', text: '✕', title: 'Отклонить и скрыть',
+              onclick: () => decide(item, 'reject'),
+            }),
+          ]),
+        ]));
+      }
+
+      if ((data.pages || 1) > 1) {
+        const mk = (p, label, dis) => h(`button.btn.btn-sm${p === data.page ? '.btn-primary' : ''}`, {
+          type: 'button', text: label, disabled: dis || false,
+          onclick: () => { state.page = p; load(); },
+        });
+        pager.appendChild(h('div.pager', [
+          mk(Math.max(1, data.page - 1), '←', data.page <= 1),
+          h('span.field-hint', { text: `Страница ${data.page} из ${data.pages} · всего ${data.total}` }),
+          mk(Math.min(data.pages, data.page + 1), '→', data.page >= data.pages),
+        ]));
+      }
+    }
+
+    async function decide(item, decision) {
+      const note = await ui.prompt({
+        title: decision === 'approve' ? 'Опубликовать сообщение' : 'Отклонить сообщение',
+        label: 'Комментарий автору (необязательно)',
+      });
+      if (note === null) return;
+      const res = await api.post('/admin/comments/decide', {
+        body: { kind: item.kind, id: item.id, decision, note },
+      });
+      if (!res.ok) { ui.err((res.data && res.data.error) || 'Не получилось'); return; }
+      ui.ok(decision === 'approve' ? 'Опубликовано' : 'Отклонено и скрыто');
+      load();
+    }
+
+    load();
+  }
+
+  window.adminExtra = { drawQueue, drawComments, drawReports, drawShare, drawMail };
 })();

@@ -40,6 +40,9 @@ create table if not exists users (
   contact       text not null default '',      -- телеграм / стим / дискорд
   is_banned     integer not null default 0,
   ban_reason    text not null default '',
+  chat_ban_until    text,                    -- чат-бан: до какой даты (null = нет)
+  chat_ban_forever  integer not null default 0, -- 1 = навсегда
+  chat_ban_reason   text not null default '',
   created_at    text not null,
   last_seen_at  text
 );
@@ -111,6 +114,7 @@ create table if not exists build_comments (
   build_id    integer not null references builds(id) on delete cascade,
   author_id   integer not null references users(id) on delete cascade,
   body        text not null,
+  moderation  text not null default 'approved', -- approved | pending (на проверке)
   created_at  text not null,
   edited_at   text,
   is_deleted  integer not null default 0
@@ -185,6 +189,7 @@ create table if not exists posts (
   author_id   integer not null references users(id) on delete cascade,
   parent_id   integer references posts(id) on delete cascade,
   body        text not null,
+  moderation  text not null default 'approved', -- approved | pending (на проверке)
   created_at  text not null,
   edited_at   text,
   is_deleted  integer not null default 0
@@ -354,6 +359,19 @@ const MIGRATIONS = [
       "alter table meta_tops add column moderation text not null default 'approved'",
       'create index if not exists idx_builds_moderation on builds(moderation, created_at desc)',
       'create index if not exists idx_tops_moderation  on meta_tops(moderation, created_at desc)',
+    ],
+  },
+  {
+    // v1.2 — чат-баны у игроков и модерация комментариев/постов
+    name: '2026-10-08-chat-moderation',
+    steps: [
+      "alter table users          add column chat_ban_until   text",
+      "alter table users          add column chat_ban_forever integer not null default 0",
+      "alter table users          add column chat_ban_reason  text not null default ''",
+      "alter table build_comments add column moderation       text not null default 'approved'",
+      "alter table posts          add column moderation       text not null default 'approved'",
+      'create index if not exists idx_bcomments_mod on build_comments(moderation, created_at desc)',
+      'create index if not exists idx_posts_mod     on posts(moderation, created_at desc)',
     ],
   },
 ];

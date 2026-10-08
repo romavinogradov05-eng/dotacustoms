@@ -65,8 +65,8 @@
       if (!entry) continue;
       strip.appendChild(h('span.fi', {
         title: picker.displayName(entry),
-        style: { width: '34px', height: '26px' },
-      }, ui.dotaIcon(store.icon(entry.img))));
+        style: { width: '55px', height: '40px' },
+      }, ui.dotaIcon(store.icon(entry.img), null, kind !== 'neutral')));
     }
     return strip;
   }
@@ -252,10 +252,10 @@
           : picker.displayName(ref);
         preview.appendChild(h('span.fi', {
           title: refLabel,
-          style: { width: t.kind === 'heroes' ? '40px' : '40px', height: t.kind === 'heroes' ? '40px' : '32px', display: 'inline-block' },
+          style: { width: '40px', height: '40px', display: 'inline-block' },
         }, t.kind === 'heroes'
           ? h('img', { src: store.heroIcon(ref), alt: '', style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } })
-          : ui.dotaIcon(store.icon(ref.img))));
+          : ui.dotaIcon(store.icon(ref.img), null, true)));
       }
     }
 

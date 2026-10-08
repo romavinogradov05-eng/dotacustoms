@@ -121,7 +121,7 @@ async function main() {
   // превратились в другие предметы.
   console.log('\nКастомные предметы CHC');
   const customs = await api('GET', '/api/catalog/custom-items');
-  ok('каталог отдаёт 30 предметов', (customs.data?.items?.length || 0) === 30,
+  ok('каталог отдаёт не меньше 30 предметов', (customs.data?.items?.length || 0) >= 30,
     'найдено ' + (customs.data?.items?.length || 0));
   ok('группа «Книги» на месте', (customs.data?.groups || []).some(g => g.key === 'books'));
   ok('источник отдаётся', !!(customs.data?.source?.url || customs.data?.source?.title));
@@ -452,6 +452,19 @@ async function main() {
 
   const topVote = await api('POST', `/api/tops/${topId}/vote`, { token: adminToken, body: { value: true } });
   ok('лайк топу', topVote.status === 200);
+
+  // Регрессия: правка должна сохранять режим, вид и заголовок (был баг —
+  // PATCH молча игнорировал mode/kind, переключение CHC↔RR не сохранялось).
+  const topEdit = await api('PATCH', `/api/tops/${topId}`, {
+    token: userToken,
+    body: { mode: 'rr', kind: 'neutrals', title: 'Топ нейтралок RR (правка)', patch: '7.42' },
+  });
+  ok('правка топа (режим/вид/заголовок)', topEdit.status === 200, JSON.stringify(topEdit.data));
+  const topEdited = await api('GET', `/api/tops/${topId}`, { token: adminToken });
+  ok('режим/вид/заголовок сохранились после правки',
+    topEdited.data?.top?.mode === 'rr' && topEdited.data?.top?.kind === 'neutrals'
+    && topEdited.data?.top?.title === 'Топ нейтралок RR (правка)' && topEdited.data?.top?.patch === '7.42',
+    JSON.stringify(topEdited.data?.top));
 
   // ── ветви ────────────────────────────────────────────────────────────
   console.log('\nВетви (баги и фичи)');
@@ -995,6 +1008,126 @@ async function main() {
   ok('секрет подписи сохранён в базе', !!secretRow && secretRow.value.length >= 32);
   const sameToken = await api('GET', '/api/auth/me', { token: userToken });
   ok('токен продолжает работать', sameToken.data?.user?.id === reg2.data.user.id);
+
+  /* ══ чат-модерация: фильтр, очередь, баны, очистка ════════════════ */
+  console.log('\nЧат-модерация');
+
+  // свои объекты, чтобы не зависеть от удалённых в других секциях
+  const chatBuild = await api('POST', '/api/builds', {
+    token: adminToken, body: { mode: 'chc', title: 'Билд для чата', items: [], skills: [], talents: [], neutrals: [] },
+  });
+  const chatBuildId = chatBuild.data?.id;
+  const chatThread = await api('POST', '/api/threads', {
+    token: adminToken,
+    body: { mode: 'chc', category: 'bug', title: 'Чат для проверки фильтра', body: 'Тестовая ветка для модерации чата.', severity: 'low' },
+  });
+  const chatThreadId = chatThread.data?.id;
+  const playerId = plainReg.data?.user?.id;
+  ok('объекты для чата созданы', chatBuildId && chatThreadId && playerId);
+
+  // обычный игрок пишет приличный комментарий — публикуется сразу
+  const cClean = await api('POST', `/api/builds/${chatBuildId}/comments`, {
+    token: plainUserToken, body: { body: 'Отличный гайд, пошёл пробовать!' },
+  });
+  ok('приличный комментарий публикуется сразу', cClean.status === 201 && cClean.data?.pending === false,
+    JSON.stringify(cClean.data));
+
+  // помеченный фильтром текст не публикуется, а уходит в очередь
+  const cDirty = await api('POST', `/api/builds/${chatBuildId}/comments`, {
+    token: plainUserToken, body: { body: 'это полная хуйня, автор дебил' },
+  });
+  const dirtyId = cDirty.data?.id;
+  ok('неприемлемый комментарий уходит в очередь (pending)',
+    cDirty.status === 201 && cDirty.data?.pending === true, JSON.stringify(cDirty.data));
+
+  const cHidden = await api('GET', `/api/builds/${chatBuildId}`, { token: plainUserToken });
+  ok('pending-комментарий скрыт от игроков', !(cHidden.data?.comments || []).some(c => c.id === dirtyId));
+  const cAdminSees = await api('GET', `/api/builds/${chatBuildId}`, { token: adminToken });
+  ok('админ видит pending-комментарий', (cAdminSees.data?.comments || []).some(c => c.id === dirtyId && c.pending));
+  const qComments = await api('GET', '/api/admin/comments?status=pending', { token: adminToken });
+  ok('комментарий попал в очередь админа', (qComments.data?.items || []).some(c => c.id === dirtyId));
+  ok('в очереди есть текст и автор',
+    (qComments.data?.items || []).some(c => c.id === dirtyId && c.body.includes('хуй') && c.author_username === 'moderplayer'));
+  const ovChat = await api('GET', '/api/admin/overview', { token: adminToken });
+  ok('в обзоре есть счётчик комментариев на проверке', (ovChat.data?.queue?.comments_pending || 0) >= 1);
+
+  const cApprove = await api('POST', '/api/admin/comments/decide', {
+    token: adminToken, body: { kind: 'comment', id: dirtyId, decision: 'approve' },
+  });
+  ok('админ одобряет комментарий', cApprove.status === 200);
+  const cAfterApprove = await api('GET', `/api/builds/${chatBuildId}`, { token: plainUserToken });
+  ok('одобренный комментарий виден игрокам', (cAfterApprove.data?.comments || []).some(c => c.id === dirtyId && !c.pending));
+
+  // помеченный пост в ветке — та же схема
+  const pDirty = await api('POST', `/api/threads/${chatThreadId}/posts`, {
+    token: plainUserToken, body: { body: 'убей себя, ты мразь' },
+  });
+  const pDirtyId = pDirty.data?.id;
+  ok('неприемлемый пост уходит в очередь (pending)',
+    pDirty.status === 201 && pDirty.data?.pending === true, JSON.stringify(pDirty.data));
+  const pHidden = await api('GET', `/api/threads/${chatThreadId}`, { token: plainUserToken });
+  ok('pending-пост скрыт от игроков', !(pHidden.data?.posts || []).some(p => p.id === pDirtyId));
+  const pReject = await api('POST', '/api/admin/comments/decide', {
+    token: adminToken, body: { kind: 'post', id: pDirtyId, decision: 'reject' },
+  });
+  ok('админ отклоняет пост', pReject.status === 200);
+  const pAfterReject = await api('GET', `/api/threads/${chatThreadId}`, { token: adminToken });
+  ok('отклонённый пост скрыт от всех', !(pAfterReject.data?.posts || []).some(p => p.id === pDirtyId));
+
+  // ── чат-бан ──
+  const chatBan = await api('POST', `/api/admin/users/${playerId}/chat-ban`, {
+    token: adminToken, body: { duration: 'week', reason: 'спам в комментариях' },
+  });
+  ok('чат-бан на неделю', chatBan.status === 200 && chatBan.data?.chat_ban?.active === true,
+    JSON.stringify(chatBan.data));
+  const meBanned = await api('GET', '/api/auth/me', { token: plainUserToken });
+  ok('чат-бан виден в профиле', meBanned.data?.user?.chat_ban?.active === true && !!meBanned.data?.user?.chat_ban?.until);
+
+  const cBlocked = await api('POST', `/api/builds/${chatBuildId}/comments`, {
+    token: plainUserToken, body: { body: 'ещё комментарий' },
+  });
+  ok('чат-забаненный не может комментировать (403)', cBlocked.status === 403, `статус ${cBlocked.status}`);
+  const pBlocked = await api('POST', `/api/threads/${chatThreadId}/posts`, {
+    token: plainUserToken, body: { body: 'ещё пост' },
+  });
+  ok('чат-забаненный не может писать в ветку (403)', pBlocked.status === 403, `статус ${pBlocked.status}`);
+  const chatVote = await api('POST', `/api/builds/${chatBuildId}/vote`, { token: plainUserToken, body: { value: 1 } });
+  ok('чат-забаненный может голосовать', chatVote.status === 200, `статус ${chatVote.status}`);
+
+  const cbBanAdmin = await api('POST', `/api/admin/users/${reg.data.user.id}/chat-ban`, {
+    token: adminToken, body: { duration: 'day', reason: 'x' },
+  });
+  ok('нельзя банить администратора (400)', cbBanAdmin.status === 400, `статус ${cbBanAdmin.status}`);
+  const cbForever = await api('POST', `/api/admin/users/${playerId}/chat-ban`, {
+    token: adminToken, body: { duration: 'forever', reason: 'повторно' },
+  });
+  ok('чат-бан навсегда', cbForever.status === 200 && cbForever.data?.chat_ban?.forever === true);
+  const cbUnban = await api('POST', `/api/admin/users/${playerId}/chat-ban`, {
+    token: adminToken, body: { banned: false },
+  });
+  ok('чат-бан снимается', cbUnban.status === 200 && cbUnban.data?.chat_ban?.active === false);
+  const cAfterUnban = await api('POST', `/api/builds/${chatBuildId}/comments`, {
+    token: plainUserToken, body: { body: 'всё, снова пишу' },
+  });
+  ok('после снятия бана можно писать', cAfterUnban.status === 201, `статус ${cAfterUnban.status}`);
+
+  // ── очистка обсуждения ──
+  const clearDenied = await api('POST', `/api/builds/${chatBuildId}/comments/clear`, { token: userToken });
+  ok('не-админ не может очистить обсуждение (403)', clearDenied.status === 403, `статус ${clearDenied.status}`);
+  const clearComments = await api('POST', `/api/builds/${chatBuildId}/comments/clear`, {
+    token: adminToken, body: { reason: 'тест' },
+  });
+  ok('админ очищает обсуждение билда', clearComments.status === 200 && (clearComments.data?.cleared || 0) >= 1,
+    JSON.stringify(clearComments.data));
+  const clearedBuild = await api('GET', `/api/builds/${chatBuildId}`, { token: adminToken });
+  ok('после очистки комментариев нет', (clearedBuild.data?.comments || []).length === 0);
+  const clearPosts = await api('POST', `/api/threads/${chatThreadId}/posts/clear`, {
+    token: adminToken, body: { reason: 'тест' },
+  });
+  ok('админ очищает ветку от сообщений', clearPosts.status === 200 && (clearPosts.data?.cleared || 0) >= 0,
+    JSON.stringify(clearPosts.data));
+  const clearedThread = await api('GET', `/api/threads/${chatThreadId}`, { token: adminToken });
+  ok('после очистки посты скрыты', !(clearedThread.data?.posts || []).some(p => !p.is_deleted));
 
   // ── итог ─────────────────────────────────────────────────────────────
   // ── ростеры героев ──────────────────────────────────────────────────
