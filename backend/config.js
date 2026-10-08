@@ -92,6 +92,8 @@ const LIMITS = {
   maxNeutrals: 12,        // нейтралки в Ratten Run
   maxTopEntries: 200,
   minTopEntries: 3,
+  maxTopTiers: 12,        // максимум тиров в одном топе
+  maxTierName: 24,        // длина названия тира
   maxPages: 100,
   sessionDays: 30,
   bodyBytes: 1024 * 1024,   // максимальный размер JSON-тела запроса

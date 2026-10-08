@@ -1304,6 +1304,98 @@ async function main() {
     return `${rows.length} строк S…D, кнопки на месте`;
   });
 
+  // ── свободные тиры: свой набор строк на каждый топ ──────────────────
+  await check('чистые функции тирборда понимают свой набор тиров', async () => {
+    const list = ['S+', 'S', 'A'];
+    const entries = [
+      { ref_id: 1, tier: 'S+', rank: 1 },
+      { ref_id: 2, tier: 'A', rank: 2 },
+      { ref_id: 3, tier: 'Q', rank: 3 },
+      { ref_id: 4, tier: '', rank: 4 },
+    ];
+    sandbox.tierboard.renumber(entries, list);
+    const s = entries.find(e => e.ref_id === 1);
+    assert(s.rank === 1, 'S+ должен идти первым, ранг ' + s.rank);
+    const rows = sandbox.tierboard.rowsOf(entries, list);
+    assert(rows.map(r => r.tier).join('|') === 'S+|S|A|',
+      'строки: ' + rows.map(r => r.tier).join('|'));
+    assert(rows[0].items[0].ref_id === 1, 'S+ не первая строка');
+    const loose = rows[rows.length - 1];
+    assert(loose.items.map(e => e.ref_id).join(',') === '3,4',
+      'чужие тиры и пустые — в «без тира»: ' + loose.items.map(e => e.ref_id).join(','));
+    const st = sandbox.tierboard.stats(entries, list);
+    assert(st.placed === 2 && st.tiers === 3, `статистика: ${st.placed} из ${st.total}, тиров ${st.tiers}`);
+    return 'ренумерация/строки/статистика по своему набору';
+  });
+
+  await check('перенос и сдвиг работают со своим набором тиров', async () => {
+    const list = ['X', 'Y', 'Z'];
+    const entries = [
+      { ref_id: 1, tier: 'X', rank: 1 },
+      { ref_id: 2, tier: 'Y', rank: 2 },
+      { ref_id: 3, tier: 'Z', rank: 3 },
+    ];
+    sandbox.tierboard.moveEntry(entries, 3, 'Y', 0, list);   // 3 → Y первой
+    assert(entries.find(e => e.ref_id === 3).tier === 'Y', 'перенос не в Y');
+    assert(entries.find(e => e.ref_id === 3).rank === 2, 'Y ранг: ' + entries.find(e => e.ref_id === 3).rank);
+    assert(entries.find(e => e.ref_id === 1).rank === 1, 'X должна остаться первой');
+    sandbox.tierboard.moveEntry(entries, 2, 'Y', 0, list);   // 2 → в начало Y
+    assert(entries.find(e => e.ref_id === 2).rank === 2 && entries.find(e => e.ref_id === 3).rank === 3,
+      'порядок в Y: ' + entries.filter(e => e.tier === 'Y').map(e => e.ref_id + ':' + e.rank).join(','));
+    sandbox.tierboard.shiftEntry(entries, 3, -1, list);      // 3 вверх внутри Y
+    assert(entries.find(e => e.ref_id === 3).rank === 2, 'сдвиг вверх внутри Y не сработал');
+    const rows = sandbox.tierboard.rowsOf(entries, list);
+    assert(rows.map(r => r.tier).join('|') === 'X|Y|Z', 'строки: ' + rows.map(r => r.tier).join('|'));
+    return 'move/shift учитывают порядок своего набора';
+  });
+
+  await check('доска рисует свои метки тиров', async () => {
+    const board = sandbox.tierboard.render('heroes', [
+      { ref_id: 7, tier: 'SS', rank: 1 },
+      { ref_id: 8, tier: '', rank: 2 },
+    ], {
+      refEntry: (kind, id) => ({ name: 'герой ' + id }),
+      tiers: ['SS', 'FAST', 'MEH'],
+      onDrop: () => {}, onShift: () => {}, onRemove: () => {}, onAddTier: () => {},
+    });
+    const labels = [...board.querySelectorAll('.tl-label')].map(l => l.textContent);
+    assert(labels.join(',') === 'SS,FAST,MEH,Без тира',
+      'метки: ' + labels.join(','));
+    const rows = board.querySelectorAll('.tl-strip');
+    assert(rows.length === 4, 'строк: ' + rows.length);
+    assert(rows[0].querySelector('[data-ref="7"]'), 'карточка не в первой строке');
+    assert(rows[3].querySelector('[data-ref="8"]'), 'карточка без тира не в последней строке');
+    return labels.join(' / ');
+  });
+
+  await check('топ с кастомными тирами отображается в деталях', async () => {
+    const refs = sandbox.store.heroes.slice(0, 4).map(x => x.id);
+    const made = await post('/tops', {
+      mode: 'chc', kind: 'heroes', title: 'Топ со своими тирами (проверка)',
+      tiers: ['TOP', 'MID'],
+      entries: refs.map((ref_id, i) => ({ ref_id, rank: i + 1, tier: i < 2 ? 'TOP' : 'MID' })),
+    }, token);
+    assert(made && made.id, 'топ не создан: ' + JSON.stringify(made).slice(0, 120));
+    const host = await renderRoute('/tops/' + made.id);
+    const labels = [...host.querySelectorAll('.tl-label')].map(l => l.textContent);
+    assert(labels.join(',') === 'TOP,MID', 'метки тиров в деталях: ' + labels.join(','));
+    const cards = host.querySelectorAll('.tl-card.view');
+    assert(cards.length === 4, 'карточек: ' + cards.length);
+    return labels.join(' / ') + ' · 4 карточки';
+  });
+
+  await check('в редакторе есть панель тиров', async () => {
+    const host = await renderRoute('/tops/new?kind=heroes');
+    const text = host.textContent;
+    assert(text.includes('Тиры'), 'нет панели тиров');
+    assert(text.includes('Добавить тир'), 'нет кнопки добавления тира');
+    const chips = host.querySelectorAll('.tier-chip');
+    assert(chips.length === 5, 'чипов тиров: ' + chips.length + ', ожидалось 5 (S…D)');
+    const inputs = [...chips].map(c => c.querySelector('input').value);
+    assert(inputs.join(',') === 'S,A,B,C,D', 'имена тиров: ' + inputs.join(','));
+    return chips.length + ' чипов (S…D), добавление на месте';
+  });
+
   await check('ростер героев доступен и пуст по умолчанию', async () => {
     assert(sandbox.store.roster('chc') === null, 'ростер CHC не должен быть задан по умолчанию');
     assert(sandbox.store.heroesFor('chc').length === sandbox.store.heroes.length,

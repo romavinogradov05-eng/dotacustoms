@@ -6,8 +6,6 @@
 (function () {
   const { h, clear } = window.ui;
 
-  const TIER_ORDER = () => store.config.tiers || ['S', 'A', 'B', 'C', 'D'];
-
   /** Ссылка на сущность топа (герой / нейтралка / способность). */
   function refEntry(kind, refId) {
     if (kind === 'heroes') return store.heroById.get(refId);
@@ -217,7 +215,7 @@
     if (!entries.length) {
       board.appendChild(h('div.empty', [h('p', { text: 'В топе нет позиций' })]));
     } else {
-      for (const row of tierboard.rowsOf(entries)) {
+      for (const row of tierboard.rowsOf(entries, top.tiers)) {
         if (!row.items.length) continue;
         const strip = h('div.tl-strip.view');
         for (const e of row.items) {
@@ -233,8 +231,7 @@
           strip.appendChild(c);
         }
         board.appendChild(h('div.tl-row', [
-          h('div.tl-label', {
-            className: row.tier ? 'tl-label tier-' + row.tier : 'tl-label tier-none',
+          h('div.tl-label.tier-' + common.tierColorClass(row.tier, top.tiers), {
             text: row.tier || '—',
           }),
           strip,
@@ -330,17 +327,19 @@
     }
     // Категорию можно задать прямо в ссылке: /tops/new?kind=neutrals
     const wantedKind = query && query.kind;
-    const firstKind = store.config.top_kinds[0] ? store.config.top_kinds[0].key : 'heroes';
+    const FIRST_KIND = store.config.top_kinds[0] ? store.config.top_kinds[0].key : 'heroes';
     const validKind = (store.config.top_kinds || []).some(k => k.key === wantedKind);
+    const defaultTiers = () => (store.config.tiers || ['S', 'A', 'B', 'C', 'D']).slice();
     let model = {
       id: null,
       mode: (query && query.mode)
         || (store.config.modes[0] ? store.config.modes[0].key : 'chc'),
-      kind: validKind ? wantedKind : firstKind,
+      kind: validKind ? wantedKind : FIRST_KIND,
       title: '',
       description: '',
       patch: store.patch || '',
       is_draft: true,
+      tiers: defaultTiers(),
       entries: [],
     };
 
@@ -363,13 +362,14 @@
       model = {
         id: t.id, mode: t.mode, kind: t.kind, title: t.title,
         description: t.description || '', patch: t.patch || '', is_draft: !!t.is_draft,
+        tiers: t.tiers && t.tiers.length ? t.tiers.slice() : defaultTiers(),
         entries: (t.entries || []).map(e => ({ ref_id: e.ref_id, rank: e.rank, tier: e.tier || '', note: e.note || '' })),
       };
     }
 
     host.appendChild(h('div.page-head', [
       h('div', [h('h1', { text: isEdit ? 'Правка топа' : 'Новый топ' })],
-        h('div.sub', { text: 'Расставь позиции по тирам S–D. Минимум 3 позиции, максимум 200.' })),
+        h('div.sub', { text: 'Расставь позиции по тирам. Набор тиров — своя шкала для каждого топа: названия можно менять, добавлять и убирать.' })),
       h('div.btn-row', [
         h('a.btn.btn-ghost', { href: isEdit ? '#/tops/' + model.id : '#/tops', text: '← Отмена' }),
         h('button.btn.btn-primary', { type: 'button', text: '💾 Сохранить', onclick: save }),
@@ -436,17 +436,18 @@
       {
         entriesHost.appendChild(tierboard.render(model.kind, model.entries, {
           refEntry,
+          tiers: model.tiers,
           onAddTier: tier => addEntry(tier),
           onRemove: refId => {
             const i = model.entries.findIndex(e => e.ref_id === refId);
             if (i >= 0) { model.entries.splice(i, 1); drawEntries(); }
           },
           onShift: (refId, delta) => {
-            tierboard.shiftEntry(model.entries, refId, delta);
+            tierboard.shiftEntry(model.entries, refId, delta, model.tiers);
             drawEntries();
           },
           onDrop: (refId, tier, index) => {
-            tierboard.moveEntry(model.entries, refId, tier, index);
+            tierboard.moveEntry(model.entries, refId, tier, index, model.tiers);
             drawEntries();
           },
         }));
@@ -456,15 +457,15 @@
       entriesHost.appendChild(h('div.btn-row', { style: { marginTop: '14px' } }, [
         h('button.btn', { type: 'button', text: '＋ Добавить позиции', onclick: addEntry }),
         h('button.btn.btn-ghost', {
-          type: 'button', text: '⚡ Разложить по тирам', title: 'Раздать поровну S/A/B/C/D сверху вниз',
+          type: 'button', text: '⚡ Разложить по тирам', title: 'Раздать поровну по строкам сверху вниз',
           onclick: () => {
             if (!model.entries.length) return;
-            const T = tierboard.tiers();
+            const T = model.tiers;
             model.entries.forEach((e, i) => {
               const per = Math.ceil(model.entries.length / T.length);
               e.tier = T[Math.min(T.length - 1, Math.floor(i / Math.max(1, per)))] || '';
             });
-            tierboard.renumber(model.entries);
+            tierboard.renumber(model.entries, model.tiers);
             drawEntries();
           },
         }),
@@ -478,7 +479,7 @@
         }),
       ]));
 
-      const st = tierboard.stats(model.entries);
+      const st = tierboard.stats(model.entries, model.tiers);
       const need = (store.limit('minTopEntries', 3));
       statsHost.textContent =
         `Позиций: ${st.total} (минимум ${need}). С тиром: ${st.placed} из ${st.total}.`
@@ -520,6 +521,7 @@
       h('div.help-note', {
         text: 'Слева — тир, справа — позиции. Тащи карточку в нужную строку; '
           + 'внутри строки порядок тоже меняется перетаскиванием. '
+          + 'Набор тиров и их названия настраиваются в панели «Тиры» справа. '
           + 'Кнопки «＋ Добавить» — заполнить список, «Разложить по тирам» — '
           + 'раздать поровну, остальное руками.',
       }),
@@ -527,10 +529,112 @@
       statsHost,
     ]));
 
+    /* Панель «Тиры» — у каждого топа своя шкала: названия, порядок, количество */
+    const TIER_SWATCH = ['#ff7b7b', '#ffc46b', '#ffe08a', '#b6e08a', '#8fd9c0'];
+    const tiersHost = h('div');
+    function applyTierChange() {
+      tierboard.renumber(model.entries, model.tiers);
+      drawEntries();
+      drawTiers();
+    }
+    function drawTiers() {
+      clear(tiersHost);
+      tiersHost.appendChild(h('div.help-note', {
+        text: 'Свой набор тиров для этого топа. Переименование переносит позиции, '
+          + 'удаление снимает тир с позиций.',
+      }));
+      if (!model.tiers.length) {
+        tiersHost.appendChild(h('div.field-hint', { text: 'Тиров нет — все позиции будут «без тира».' }));
+      }
+      model.tiers.forEach((tier, i) => {
+        const input = h('input.input', {
+          type: 'text', maxlength: 24, value: tier, title: 'Название тира',
+          style: { flex: '1', minWidth: '0', padding: '4px 8px', fontSize: '13px' },
+        });
+        input.addEventListener('change', () => {
+          const v = input.value.trim();
+          if (!v || v === tier) { input.value = tier; return; }
+          if (model.tiers.includes(v)) { ui.err('Тир «' + v + '» уже есть'); input.value = tier; return; }
+          model.tiers[i] = v;
+          for (const e of model.entries) if (e.tier === tier) e.tier = v;
+          applyTierChange();
+        });
+        const chip = h('div.tier-chip', [
+          h('span.tier-swatch', { style: { background: TIER_SWATCH[i % TIER_SWATCH.length] } }),
+          input,
+          h('button.tl-b', { type: 'button', text: '↑', title: 'Строкой выше',
+            onclick: () => { if (i > 0) { const t = model.tiers[i]; model.tiers[i] = model.tiers[i - 1]; model.tiers[i - 1] = t; applyTierChange(); } } }),
+          h('button.tl-b', { type: 'button', text: '↓', title: 'Строкой ниже',
+            onclick: () => { if (i < model.tiers.length - 1) { const t = model.tiers[i]; model.tiers[i] = model.tiers[i + 1]; model.tiers[i + 1] = t; applyTierChange(); } } }),
+          h('button.tl-x', {
+            type: 'button', text: '✕', title: 'Удалить тир',
+            onclick: async () => {
+              const used = model.entries.filter(e => e.tier === tier).length;
+              const yes = await ui.confirm({
+                title: 'Удалить тир «' + tier + '»?',
+                text: used
+                  ? `Позиций в этом тире: ${used}. Они переедут в «Без тира».`
+                  : 'В этом тире нет позиций.',
+                okLabel: 'Удалить', kind: 'danger',
+              });
+              if (!yes) return;
+              model.tiers.splice(i, 1);
+              for (const e of model.entries) if (e.tier === tier) e.tier = '';
+              applyTierChange();
+            },
+          }),
+        ]);
+        tiersHost.appendChild(chip);
+      });
+      const defaultT = (store.config.tiers || ['S', 'A', 'B', 'C', 'D']);
+      const isDefault = model.tiers.length === defaultT.length
+        && model.tiers.every((t, i) => t === defaultT[i]);
+      tiersHost.appendChild(h('div.btn-row', { style: { marginTop: '10px' } }, [
+        h('button.btn.btn-sm', {
+          type: 'button', text: '＋ Добавить тир',
+          onclick: async () => {
+            const max = store.limit('maxTopTiers', 12);
+            if (model.tiers.length >= max) { ui.err('Максимум ' + max + ' тиров'); return; }
+            const name = await ui.prompt({
+              title: 'Новый тир',
+              label: 'Название (появится последней строкой доски)',
+              placeholder: 'например: S++, F-, SS',
+              maxLength: 24,
+            });
+            if (!name) return;
+            if (model.tiers.includes(name)) { ui.err('Тир «' + name + '» уже есть'); return; }
+            model.tiers.push(name);
+            applyTierChange();
+          },
+        }),
+        isDefault ? null : h('button.btn.btn-ghost.btn-sm', {
+          type: 'button', text: '↺ Сбросить на S–D',
+          title: 'Вернуть набор S/A/B/C/D',
+          onclick: async () => {
+            const yes = await ui.confirm({
+              title: 'Сбросить тиры?',
+              text: 'Позиции с тирами, которых нет в S–D, переедут в «Без тира».',
+              okLabel: 'Сбросить',
+            });
+            if (!yes) return;
+            model.tiers = defaultT.slice();
+            for (const e of model.entries) if (!defaultT.includes(e.tier)) e.tier = '';
+            applyTierChange();
+          },
+        }),
+      ]));
+    }
+
     const patchInput = h('input.input', {
       type: 'text', maxlength: 12, value: model.patch, placeholder: '7.41',
       oninput: e => { model.patch = e.target.value; },
     });
+
+    side.appendChild(h('div.panel', [
+      h('div.panel-title', { text: '🏷️ Тиры' }),
+      tiersHost,
+    ]));
+    drawTiers();
 
     side.appendChild(h('div.panel', [
       h('div.panel-title', { text: 'Публикация' }),
@@ -553,7 +657,7 @@
       const payload = {
         mode: model.mode, kind: model.kind, title: model.title.trim(),
         description: model.description.trim(), patch: model.patch.trim(),
-        is_draft: model.is_draft, entries: model.entries,
+        is_draft: model.is_draft, tiers: model.tiers, entries: model.entries,
       };
       const res = isEdit
         ? await api.patch('/tops/' + model.id, { body: payload })

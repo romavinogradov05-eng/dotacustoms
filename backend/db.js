@@ -135,7 +135,8 @@ create table if not exists meta_tops (
   updated_at  text not null,
   verified_by integer references users(id) on delete set null,
   verified_at text,
-  verify_note text not null default ''
+  verify_note text not null default '',
+  tiers      text                       -- JSON-массив названий тиров; NULL = дефолт S…D
 );
 create index if not exists idx_tops_mode on meta_tops(mode, kind, is_draft, created_at desc);
 
@@ -144,7 +145,7 @@ create table if not exists meta_top_entries (
   top_id  integer not null references meta_tops(id) on delete cascade,
   rank    integer not null default 0,         -- 1 = лучший
   ref_id  integer not null,                    -- id героя / нейтралки / способности
-  tier    text not null default '',            -- S | A | B | C | D
+  tier    text not null default '',            -- метка тира (S | A | … | кастомная)
   note    text not null default ''
 );
 create index if not exists idx_entries_top on meta_top_entries(top_id, rank);
@@ -372,6 +373,13 @@ const MIGRATIONS = [
       "alter table posts          add column moderation       text not null default 'approved'",
       'create index if not exists idx_bcomments_mod on build_comments(moderation, created_at desc)',
       'create index if not exists idx_posts_mod     on posts(moderation, created_at desc)',
+    ],
+  },
+  {
+    // v1.3 — свободные тиры в топах: свой набор строк тиров на каждый топ
+    name: '2026-10-08-top-tiers',
+    steps: [
+      'alter table meta_tops add column tiers text',
     ],
   },
 ];

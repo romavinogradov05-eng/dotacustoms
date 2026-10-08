@@ -466,6 +466,73 @@ async function main() {
     && topEdited.data?.top?.title === 'Топ нейтралок RR (правка)' && topEdited.data?.top?.patch === '7.42',
     JSON.stringify(topEdited.data?.top));
 
+  // ── свободные тиры: у каждого топа свой набор строк ────────────────
+  const customTop = await api('POST', '/api/tops', {
+    token: userToken,
+    body: {
+      mode: 'chc', kind: 'skills', title: 'Топ со своими тирами',
+      tiers: ['S+', 'S', 'A'],
+      entries: heroRefs.slice(0, 4).map((ref_id, i) => ({
+        ref_id, rank: i + 1, tier: i === 0 ? 'S+' : (i === 1 ? 'S' : 'A'), note: '',
+      })),
+    },
+  });
+  ok('топ с кастомными тирами создан', customTop.status === 201, JSON.stringify(customTop.data));
+  const customTopId = customTop.data?.id;
+  const customGet = await api('GET', `/api/tops/${customTopId}`, { token: userToken });
+  ok('топ отдаёт свой набор тиров',
+    JSON.stringify(customGet.data?.top?.tiers) === JSON.stringify(['S+', 'S', 'A']),
+    JSON.stringify(customGet.data?.top?.tiers));
+  ok('тир из своего набора сохраняется',
+    customGet.data?.top?.entries?.[0]?.tier === 'S+');
+  ok('тиры топа по умолчанию — дефолт S…D',
+    JSON.stringify(topOne.data?.top?.tiers) === JSON.stringify(null)
+    || topOne.data?.top?.tiers === null, JSON.stringify(topOne.data?.top?.tiers));
+
+  // Тир, которого нет в наборе топа, срезается в «без тира»
+  const strayTier = await api('POST', '/api/tops', {
+    token: userToken,
+    body: {
+      mode: 'chc', kind: 'skills', title: 'Топ с чужим тиром',
+      tiers: ['X', 'Y'],
+      entries: heroRefs.slice(0, 3).map((ref_id, i) => ({ ref_id, rank: i + 1, tier: i === 0 ? 'X' : 'Q' })),
+    },
+  });
+  ok('топ с чужим тиром создан', strayTier.status === 201, JSON.stringify(strayTier.data));
+  const strayGet = await api('GET', `/api/tops/${strayTier.data?.id}`, { token: userToken });
+  ok('тир вне набора срезается в пустой', strayGet.data?.top?.entries?.[1]?.tier === ''
+    && strayGet.data?.top?.entries?.[0]?.tier === 'X', JSON.stringify(strayGet.data?.top?.entries));
+
+  // Невалидные наборы тиров отклоняются
+  const emptyTiers = await api('POST', '/api/tops', {
+    token: userToken,
+    body: { mode: 'chc', kind: 'skills', title: 'Пустые тиры', tiers: [], entries: heroRefs.slice(0, 3).map((ref_id, i) => ({ ref_id, rank: i + 1, tier: 'S' })) },
+  });
+  ok('пустой набор тиров отклонён (400)', emptyTiers.status === 400);
+  const stringTiers = await api('POST', '/api/tops', {
+    token: userToken,
+    body: { mode: 'chc', kind: 'skills', title: 'Тиры-строка', tiers: 'S,A,B', entries: heroRefs.slice(0, 3).map((ref_id, i) => ({ ref_id, rank: i + 1, tier: 'S' })) },
+  });
+  ok('тиры не-массивом отклонены (400)', stringTiers.status === 400);
+
+  // Переименование и сброс тиров через PATCH
+  const tiersPatch = await api('PATCH', `/api/tops/${customTopId}`, {
+    token: userToken,
+    body: { tiers: ['SS', 'S'], entries: customGet.data.top.entries.map(e => ({ ...e, tier: e.tier === 'S+' ? 'SS' : e.tier })) },
+  });
+  ok('правка набора тиров', tiersPatch.status === 200, JSON.stringify(tiersPatch.data));
+  const tiersAfter = await api('GET', `/api/tops/${customTopId}`, { token: userToken });
+  ok('новый набор сохранён, записи перенесены', JSON.stringify(tiersAfter.data?.top?.tiers) === JSON.stringify(['SS', 'S'])
+    && tiersAfter.data?.top?.entries?.[0]?.tier === 'SS', JSON.stringify(tiersAfter.data?.top));
+
+  const tiersReset = await api('PATCH', `/api/tops/${customTopId}`, {
+    token: userToken, body: { tiers: null },
+  });
+  ok('сброс тиров на дефолт через PATCH', tiersReset.status === 200);
+  const tiersAfterReset = await api('GET', `/api/tops/${customTopId}`, { token: userToken });
+  ok('после сброса tiers = null', tiersAfterReset.data?.top?.tiers === null,
+    JSON.stringify(tiersAfterReset.data?.top?.tiers));
+
   // ── ветви ────────────────────────────────────────────────────────────
   console.log('\nВетви (баги и фичи)');
   const thread = await api('POST', '/api/threads', {

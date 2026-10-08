@@ -18,6 +18,16 @@
     return h(`span.badge.badge-mode-${m.key}`, { text: m.short || m.title });
   }
 
+  /** Палитра тиров: буквенные тиры красятся своими цветами, остальные — по индексу ряда. */
+  const TIER_PALETTE = ['S', 'A', 'B', 'C', 'D'];
+  function tierColorClass(tier, tierList) {
+    if (!tier) return 'none';
+    if (TIER_PALETTE.includes(tier)) return tier;
+    const list = tierList && tierList.length ? tierList : (store.config.tiers || TIER_PALETTE);
+    const idx = list.indexOf(tier);
+    return idx >= 0 ? TIER_PALETTE[idx % TIER_PALETTE.length] : '';
+  }
+
   /** Строка «ник · роль · когда». */
   function byline(author, agoText, extra) {
     if (!author) return h('span', { text: 'удалённый автор' });
@@ -238,10 +248,11 @@
       byTier[e.tier].push(e);
     }
     // Позиции без тира тоже показываем — иначе превью карточки пустует.
-    for (const tier of store.config.tiers.concat('')) {
+    const topTiers = t.tiers && t.tiers.length ? t.tiers : store.config.tiers;
+    topTiers.concat('').forEach((tier, i) => {
       const list = byTier[tier];
-      if (!list) continue;
-      preview.appendChild(h('span.badge.badge-tier-' + (tier || 'none'), { text: tier || '—' }));
+      if (!list) return;
+      preview.appendChild(h('span.badge.badge-tier-' + tierColorClass(tier, topTiers), { text: tier || '—' }));
       for (const e of list.slice(0, 4)) {
         const ref = t.kind === 'heroes' ? store.heroById.get(e.ref_id)
           : t.kind === 'neutrals' ? store.neutralById.get(e.ref_id)
@@ -257,7 +268,7 @@
           ? h('img', { src: store.heroIcon(ref), alt: '', style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } })
           : ui.dotaIcon(store.icon(ref.img), null, true)));
       }
-    }
+    });
 
     return h('a.card' + (t.is_draft ? '.draft' : ''), { href: '#/tops/' + t.id }, [
       h('div.meta-row', [
@@ -375,5 +386,6 @@
     modeBadge, byline, verifyBadge, draftBadge, draftToggle, itemStrip,
     modeTabs, pager, empty, voteBox, flagButton, FLAG_REASONS,
     buildCard, topCard, threadCard, selectField, inputField, listSection, TOP_KIND_RU,
+    tierColorClass,
   };
 })();

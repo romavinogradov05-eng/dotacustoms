@@ -123,7 +123,8 @@ create table if not exists meta_tops (
   verified_by integer references users(id) on delete set null deferrable,
   verified_at text,
   verify_note text not null default '',
-  moderation  text not null default 'approved'
+  moderation  text not null default 'approved',
+  tiers       text                        -- JSON-массив названий тиров; NULL = дефолт S…D
 );
 create index if not exists idx_tops_mode on meta_tops(mode, kind, is_draft, created_at desc);
 

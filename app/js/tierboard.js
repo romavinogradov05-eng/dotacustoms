@@ -20,7 +20,13 @@
   /** Строка для карточек без тира. */
   const NO_TIER = '';
 
-  const tiers = () => (store.config.tiers || ['S', 'A', 'B', 'C', 'D']).slice();
+  const DEFAULT_TIERS = ['S', 'A', 'B', 'C', 'D'];
+
+  /** Набор тиров: свой для каждого топа (opts) или дефолт из конфига. */
+  const tiers = (custom) => {
+    const list = custom && custom.length ? custom : (store.config.tiers || DEFAULT_TIERS);
+    return list.slice();
+  };
 
   /* ── чистая логика ─────────────────────────────────────────────────── */
 
@@ -28,7 +34,7 @@
    * Переносит карточку в другую строку и на позицию внутри неё.
    * entries мутируется на месте — так же, как их держит редактор.
    */
-  function moveEntry(entries, refId, toTier, toIndex) {
+  function moveEntry(entries, refId, toTier, toIndex, tierList) {
     const from = entries.findIndex(e => e.ref_id === refId);
     if (from < 0) return entries;
     const [card] = entries.splice(from, 1);
@@ -45,11 +51,11 @@
       : inTarget[pos].i;
 
     entries.splice(at, 0, card);
-    return renumber(entries);
+    return renumber(entries, tierList);
   }
 
   /** Переставляет карточку на шаг выше/ниже ВНУТРИ своей строки. */
-  function shiftEntry(entries, refId, delta) {
+  function shiftEntry(entries, refId, delta, tierList) {
     const card = entries.find(e => e.ref_id === refId);
     if (!card) return entries;
     const tier = card.tier || NO_TIER;
@@ -63,26 +69,26 @@
     const t = entries[a];
     entries[a] = entries[b];
     entries[b] = t;
-    return renumber(entries);
+    return renumber(entries, tierList);
   }
 
   /** Пересчитывает сквозные номера: сначала строки сверху вниз. */
-  function renumber(entries) {
-    const order = tiers();
+  function renumber(entries, tierList) {
+    const order = tiers(tierList);
     let rank = 1;
     for (const tier of order.concat([NO_TIER])) {
       for (const e of entries) {
         if ((e.tier || NO_TIER) === tier) e.rank = rank++;
       }
     }
-    // Позиции с неизвестным тиром (если конфиг изменили) — в конец
+    // Позиции с неизвестным тиром (если набор изменили) — в конец
     for (const e of entries) if (!e.rank) e.rank = rank++;
     return entries;
   }
 
   /** Группировка для отрисовки: [{tier, items:[…]}]. */
-  function rowsOf(entries) {
-    const all = tiers();
+  function rowsOf(entries, tierList) {
+    const all = tiers(tierList);
     const known = entries.filter(e => all.includes(e.tier));
     const loose = entries.filter(e => !all.includes(e.tier));
     const out = all.map(tier => ({ tier, items: known.filter(e => e.tier === tier) }));
@@ -91,8 +97,8 @@
   }
 
   /** Сколько всего позиций и сколько без тира — для подсказок. */
-  function stats(entries) {
-    const all = tiers();
+  function stats(entries, tierList) {
+    const all = tiers(tierList);
     return {
       total: entries.length,
       placed: entries.filter(e => all.includes(e.tier)).length,
@@ -162,8 +168,9 @@
   function render(kind, entries, opts) {
     const board = h('div.tl-board');
     const labelFor = t => (t === NO_TIER ? 'Без тира' : t);
+    const tierList = opts.tiers;
 
-    for (const row of rowsOf(entries)) {
+    for (const row of rowsOf(entries, tierList)) {
       const strip = h('div.tl-strip', {
         'data-tier': row.tier,
         ondragover: ev => {

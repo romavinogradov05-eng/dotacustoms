@@ -32,6 +32,7 @@ function topPayload(db, t, viewer) {
     patch: t.patch,
     is_draft: !!t.is_draft,
     moderation: t.moderation || MODERATION.APPROVED,
+    tiers: parseTiers(t.tiers),
     entries,
     entry_count: entries.length,
     likes,
@@ -67,7 +68,8 @@ const SELECT_TOP = `
 `;
 
 /** Приводит записи к виду [{ref_id, rank, tier, note}] с проверками. */
-function cleanEntries(list) {
+function cleanEntries(list, tierList) {
+  const tiers = tierList && tierList.length ? tierList : TOP_TIERS;
   if (!Array.isArray(list)) throw bad('entries должен быть массивом');
   if (list.length > LIMITS.maxTopEntries) throw bad(`Максимум ${LIMITS.maxTopEntries} позиций`);
   const out = [];
@@ -80,13 +82,45 @@ function cleanEntries(list) {
     out.push({
       ref_id: refId,
       rank: Number.isInteger(Number(raw.rank)) ? Number(raw.rank) : i + 1,
-      tier: TOP_TIERS.includes(raw.tier) ? raw.tier : '',
+      tier: tiers.includes(raw.tier) ? raw.tier : '',
       note: str(raw.note, { field: 'note', max: 400, required: false }),
     });
   }
   if (out.length < LIMITS.minTopEntries) {
     throw bad(`Минимум ${LIMITS.minTopEntries} позиций в топе`);
   }
+  return out;
+}
+
+/** Читает сохранённые тиры топа из JSON-колонки; null — дефолт S…D. */
+function parseTiers(json) {
+  if (!json) return null;
+  let a;
+  try { a = JSON.parse(json); } catch { return null; }
+  if (!Array.isArray(a) || !a.length || !a.every(x => typeof x === 'string' && x.trim())) return null;
+  return a;
+}
+
+/**
+ * Проверяет набор тиров из запроса.
+ * undefined — поле не прислано (не трогаем), null — сброс на дефолт S…D,
+ * массив — валидные строки без повторов (максимум LIMITS.maxTopTiers).
+ */
+function cleanTiers(list) {
+  if (list === undefined) return undefined;
+  if (list === null) return null;
+  if (!Array.isArray(list)) throw bad('tiers должен быть массивом строк');
+  if (list.length > LIMITS.maxTopTiers) throw bad(`Максимум ${LIMITS.maxTopTiers} тиров`);
+  const out = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const t = str(raw, { field: 'тир', max: LIMITS.maxTierName, required: false });
+    if (!t) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  if (!out.length) throw bad('Нужен хотя бы один тир');
   return out;
 }
 
@@ -173,7 +207,8 @@ module.exports = function topRoutes(ctx) {
     const mode = oneOf(req.body.mode, MODE_KEYS, { field: 'режим' });
     const kind = oneOf(req.body.kind, TOP_KIND_KEYS, { field: 'вид топа' });
     const title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });
-    const entries = cleanEntries(req.body.entries);
+    const tiers = cleanTiers(req.body.tiers) ?? TOP_TIERS;
+    const entries = cleanEntries(req.body.entries, tiers);
     const isDraft = bool(req.body.is_draft, false) ? 1 : 0;
     // Сюда доходят только Coach и админы (requireStaff) — публикуют сразу.
     const moderation = moderationFor(req.user, isDraft);
@@ -181,13 +216,15 @@ module.exports = function topRoutes(ctx) {
     const now = nowIso();
     const info = db.prepare(`
       insert into meta_tops (author_id, mode, kind, title, description, patch, is_draft,
-                             moderation, created_at, updated_at)
-      values (?,?,?,?,?,?,?,?,?,?)
+                             tiers, moderation, created_at, updated_at)
+      values (?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       req.user.id, mode, kind, title,
       str(req.body.description, { field: 'описание', max: LIMITS.descriptionMax, required: false }),
       str(req.body.patch, { field: 'патч', max: 12, required: false }),
-      isDraft, moderation, now, now,
+      isDraft,
+      tiers === TOP_TIERS ? null : JSON.stringify(tiers),
+      moderation, now, now,
     );
     const id = Number(info.lastInsertRowid);
     writeEntries(db, id, entries);
@@ -219,6 +256,11 @@ module.exports = function topRoutes(ctx) {
     if (req.body.title !== undefined) set.title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });
     if (req.body.description !== undefined) set.description = str(req.body.description, { field: 'описание', max: LIMITS.descriptionMax, required: false });
     if (req.body.patch !== undefined) set.patch = str(req.body.patch, { field: 'патч', max: 12, required: false });
+    // Тиры топа можно поменять целиком; null — сброс на дефолт S…D.
+    if (req.body.tiers !== undefined) {
+      const tiers = cleanTiers(req.body.tiers);
+      set.tiers = tiers === null ? null : JSON.stringify(tiers);
+    }
     // Публикация черновика должна сразу менять и модерацию. Раньше PATCH
     // обновлял только is_draft, а moderation оставалась 'pending' — топ
     // формально опубликован, но обычные игроки его не видят.
@@ -235,7 +277,12 @@ module.exports = function topRoutes(ctx) {
       db.prepare(`update meta_tops set ${cols} where id = ?`).run(...Object.values(set), t.id);
     }
     if (req.body.entries !== undefined) {
-      const entries = cleanEntries(req.body.entries);
+      // Проверяем тиры записей по актуальному набору: присланному в этом
+      // PATCH или уже сохранённому у топа.
+      const tierList = req.body.tiers !== undefined
+        ? (cleanTiers(req.body.tiers) || TOP_TIERS)
+        : (parseTiers(t.tiers) || TOP_TIERS);
+      const entries = cleanEntries(req.body.entries, tierList);
       writeEntries(db, t.id, entries);
       db.prepare('update meta_tops set updated_at = ? where id = ?').run(nowIso(), t.id);
       db.prepare('update meta_tops set verified_at = null, verified_by = null, verify_note = ? where id = ?')

@@ -903,6 +903,16 @@ body::before {
 .tl-label.add:hover { transform: scale(1.06); }
 .tl-label.add::after { content: '＋'; position: absolute; right: 3px; bottom: 2px; font-size: 11px; opacity: 0.85; }
 
+/* Панель тиров в редакторе топа: свои названия и порядок строк */
+.tier-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 3px; padding: 4px 6px; margin-top: 6px;
+}
+.tier-swatch { flex: none; width: 14px; height: 14px; border-radius: 3px; }
+.tier-chip .tl-b { font-size: 11px; padding: 0 3px; }
+.tier-chip .tl-x { font-size: 11px; padding: 0 4px; }
+
 @media (max-width: 720px) {
   .tl-label { width: 42px; font-size: 14px; }
   .tl-card { max-width: 100%; }
