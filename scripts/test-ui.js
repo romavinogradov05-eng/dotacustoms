@@ -993,6 +993,22 @@ async function main() {
     return 'категория нейтралок открылась';
   });
 
+  await check('вкладки режимов переключаются и подсвечиваются', async () => {
+    const host = await renderRoute('/tops');
+    const tabOf = txt => [...host.querySelectorAll('.tab')].find(t => t.textContent.trim() === txt);
+    const chc = tabOf('Custom Hero Chaos');
+    const rr = tabOf('Ratten Run');
+    assert(chc && rr, 'нет вкладок режимов CHC/Ratten Run');
+    // Раньше клик фильтровал список, но активной оставалась прежняя
+    // вкладка — переключение выглядело сломанным.
+    rr.click();
+    assert(rr.classList.contains('active'), 'вкладка Ratten Run не подсветилась после клика');
+    assert(!chc.classList.contains('active'), 'вкладка CHC осталась активной рядом с Ratten Run');
+    chc.click();
+    assert(chc.classList.contains('active'), 'вкладка CHC не подсветилась обратно');
+    return 'активная вкладка едет за кликом';
+  });
+
   say('');
   say('Заявки и уведомления');
   await check('форма заявки — свободная, с темой', async () => {

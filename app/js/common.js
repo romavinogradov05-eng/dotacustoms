@@ -75,13 +75,22 @@
   function modeTabs(current, onChange, { all = true } = {}) {
     const box = h('div.tabs');
     const options = all ? [{ key: '', title: 'Все режимы' }].concat(store.config.modes) : store.config.modes;
+    // Подсветку двигаем прямо на клике: раньше список фильтровался, а
+    // активной оставалась прежняя вкладка — переключение выглядело
+    // сломанным, хотя данные менялись.
+    const tabs = [];
+    const paint = now => {
+      for (const [key, node] of tabs) node.classList.toggle('active', (now || '') === key);
+    };
     for (const m of options) {
-      box.appendChild(h(`button.tab${(current || '') === m.key ? '.active' : ''}`, {
-        type: 'button',
-        text: m.title,
-        onclick: () => onChange(m.key),
-      }));
+      const node = h('button.tab', {
+        type: 'button', text: m.title,
+        onclick: () => { paint(m.key); onChange(m.key); },
+      });
+      tabs.push([m.key, node]);
+      box.appendChild(node);
     }
+    paint(current);
     return box;
   }
 
@@ -228,10 +237,11 @@
       if (!byTier[e.tier]) byTier[e.tier] = [];
       byTier[e.tier].push(e);
     }
-    for (const tier of store.config.tiers) {
+    // Позиции без тира тоже показываем — иначе превью карточки пустует.
+    for (const tier of store.config.tiers.concat('')) {
       const list = byTier[tier];
       if (!list) continue;
-      preview.appendChild(h('span.badge.badge-tier-' + tier, { text: tier }));
+      preview.appendChild(h('span.badge.badge-tier-' + (tier || 'none'), { text: tier || '—' }));
       for (const e of list.slice(0, 4)) {
         const ref = t.kind === 'heroes' ? store.heroById.get(e.ref_id)
           : t.kind === 'neutrals' ? store.neutralById.get(e.ref_id)
@@ -242,7 +252,7 @@
           : picker.displayName(ref);
         preview.appendChild(h('span.fi', {
           title: refLabel,
-          style: { width: t.kind === 'heroes' ? '26px' : '32px', height: '24px', display: 'inline-block' },
+          style: { width: t.kind === 'heroes' ? '40px' : '40px', height: t.kind === 'heroes' ? '40px' : '32px', display: 'inline-block' },
         }, t.kind === 'heroes'
           ? h('img', { src: store.heroIcon(ref), alt: '', style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } })
           : ui.dotaIcon(store.icon(ref.img))));
