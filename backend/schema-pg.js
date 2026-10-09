@@ -133,6 +133,7 @@ create table if not exists meta_top_entries (
   top_id  integer not null references meta_tops(id) on delete cascade deferrable,
   rank    integer not null default 0,
   ref_id  integer not null,
+  kind    text not null default '',
   tier    text not null default '',
   note    text not null default ''
 );

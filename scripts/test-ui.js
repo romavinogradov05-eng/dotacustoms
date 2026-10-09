@@ -1407,6 +1407,42 @@ async function main() {
     return chips.length + ' чипов (S…D), добавление на месте';
   });
 
+  // ── смешивание видов в одном топе ───────────────────────────────────
+  await check('смешанный топ рисует карточки разных видов', async () => {
+    const used = new Set();
+    const heroId = sandbox.store.heroes.find(h => !used.has(h.id)).id;
+    used.add(heroId);
+    const neutralId = sandbox.store.neutrals.find(n => !used.has(n.id)).id;
+    used.add(neutralId);
+    const abilityId = sandbox.store.abilities
+      .filter(a => a.playable && a.hero).find(a => !used.has(a.id)).id;
+    const made = await post('/tops', {
+      mode: 'chc', kind: 'heroes', title: 'Смешанный топ (UI)',
+      entries: [
+        { ref_id: heroId, kind: 'heroes', rank: 1, tier: 'S' },
+        { ref_id: neutralId, kind: 'neutrals', rank: 2, tier: 'A' },
+        { ref_id: abilityId, kind: 'skills', rank: 3, tier: 'A' },
+      ],
+    }, token);
+    assert(made && made.id, 'топ не создан: ' + JSON.stringify(made).slice(0, 120));
+    const host = await renderRoute('/tops/' + made.id);
+    const cards = host.querySelectorAll('.tl-card.view');
+    assert(cards.length === 3, 'карточек: ' + cards.length);
+    const roundHero = host.querySelectorAll('.tl-card.view img.round');
+    assert(roundHero.length === 1, 'портрет героя не найден: ' + roundHero.length);
+    return '3 карточки: герой + нейтралка + способность';
+  });
+
+  await check('в редакторе топа можно смешивать виды', async () => {
+    const host = await renderRoute('/tops/new?kind=heroes');
+    const text = host.textContent;
+    assert(text.includes('＋ Герой'), 'нет кнопки героя');
+    assert(text.includes('＋ Нейтралка'), 'нет кнопки нейтралки');
+    assert(text.includes('＋ Способность'), 'нет кнопки способности');
+    assert(text.includes('смешивать'), 'нет подсказки про смешивание');
+    return 'три кнопки добавления и подсказка';
+  });
+
   await check('ростер героев доступен и пуст по умолчанию', async () => {
     assert(sandbox.store.roster('chc') === null, 'ростер CHC не должен быть задан по умолчанию');
     assert(sandbox.store.heroesFor('chc').length === sandbox.store.heroes.length,

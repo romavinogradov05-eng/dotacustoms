@@ -21,8 +21,8 @@ function topPayload(db, t, viewer) {
     : false;
   const likes = db.prepare('select count(*) as c from top_votes where top_id = ?').get(t.id).c;
   const entries = db.prepare(
-    'select id, rank, ref_id, tier, note from meta_top_entries where top_id = ? order by rank asc, id asc'
-  ).all(t.id);
+    'select id, rank, ref_id, kind, tier, note from meta_top_entries where top_id = ? order by rank asc, id asc'
+  ).all(t.id).map(e => ({ ...e, kind: e.kind || t.kind }));
   return {
     id: t.id,
     mode: t.mode,
@@ -67,9 +67,12 @@ const SELECT_TOP = `
     left join users vu on vu.id = t.verified_by
 `;
 
-/** Приводит записи к виду [{ref_id, rank, tier, note}] с проверками. */
-function cleanEntries(list, tierList) {
+/** Приводит записи к виду [{ref_id, kind, rank, tier, note}] с проверками. */
+function cleanEntries(list, tierList, defaultKind) {
   const tiers = tierList && tierList.length ? tierList : TOP_TIERS;
+  // Вид позиции можно задать явно (смешанный топ). Если не задан — берём
+  // вид самого топа, чтобы старые клиенты и тесты работали без изменений.
+  const fallback = TOP_KIND_KEYS.includes(defaultKind) ? defaultKind : TOP_KIND_KEYS[0];
   if (!Array.isArray(list)) throw bad('entries должен быть массивом');
   if (list.length > LIMITS.maxTopEntries) throw bad(`Максимум ${LIMITS.maxTopEntries} позиций`);
   const out = [];
@@ -81,6 +84,7 @@ function cleanEntries(list, tierList) {
     seen.add(refId);
     out.push({
       ref_id: refId,
+      kind: oneOf(raw?.kind, TOP_KIND_KEYS, { field: 'вид позиции', required: false }) || fallback,
       rank: Number.isInteger(Number(raw.rank)) ? Number(raw.rank) : i + 1,
       tier: tiers.includes(raw.tier) ? raw.tier : '',
       note: str(raw.note, { field: 'note', max: 400, required: false }),
@@ -127,9 +131,9 @@ function cleanTiers(list) {
 function writeEntries(db, topId, entries) {
   db.prepare('delete from meta_top_entries where top_id = ?').run(topId);
   const ins = db.prepare(
-    'insert into meta_top_entries (top_id, rank, ref_id, tier, note) values (?,?,?,?,?)'
+    'insert into meta_top_entries (top_id, rank, ref_id, kind, tier, note) values (?,?,?,?,?,?)'
   );
-  for (const e of entries) ins.run(topId, e.rank, e.ref_id, e.tier, e.note);
+  for (const e of entries) ins.run(topId, e.rank, e.ref_id, e.kind, e.tier, e.note);
   ins.finalize();
 }
 
@@ -208,7 +212,7 @@ module.exports = function topRoutes(ctx) {
     const kind = oneOf(req.body.kind, TOP_KIND_KEYS, { field: 'вид топа' });
     const title = str(req.body.title, { field: 'название', max: LIMITS.titleMax });
     const tiers = cleanTiers(req.body.tiers) ?? TOP_TIERS;
-    const entries = cleanEntries(req.body.entries, tiers);
+    const entries = cleanEntries(req.body.entries, tiers, kind);
     const isDraft = bool(req.body.is_draft, false) ? 1 : 0;
     // Сюда доходят только Coach и админы (requireStaff) — публикуют сразу.
     const moderation = moderationFor(req.user, isDraft);
@@ -282,7 +286,11 @@ module.exports = function topRoutes(ctx) {
       const tierList = req.body.tiers !== undefined
         ? (cleanTiers(req.body.tiers) || TOP_TIERS)
         : (parseTiers(t.tiers) || TOP_TIERS);
-      const entries = cleanEntries(req.body.entries, tierList);
+      // Вид позиций по умолчанию: присланный в этом PATCH или уже у топа.
+      const entryKind = req.body.kind !== undefined
+        ? oneOf(req.body.kind, TOP_KIND_KEYS, { field: 'вид топа' })
+        : t.kind;
+      const entries = cleanEntries(req.body.entries, tierList, entryKind);
       writeEntries(db, t.id, entries);
       db.prepare('update meta_tops set updated_at = ? where id = ?').run(nowIso(), t.id);
       db.prepare('update meta_tops set verified_at = null, verified_by = null, verify_note = ? where id = ?')

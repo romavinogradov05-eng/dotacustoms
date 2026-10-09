@@ -254,17 +254,18 @@
       if (!list) return;
       preview.appendChild(h('span.badge.badge-tier-' + tierColorClass(tier, topTiers), { text: tier || '—' }));
       for (const e of list.slice(0, 4)) {
-        const ref = t.kind === 'heroes' ? store.heroById.get(e.ref_id)
-          : t.kind === 'neutrals' ? store.neutralById.get(e.ref_id)
+        const k = e.kind || t.kind;
+        const ref = k === 'heroes' ? store.heroById.get(e.ref_id)
+          : k === 'neutrals' ? store.neutralById.get(e.ref_id)
             : store.abilityById.get(e.ref_id);
         if (!ref) continue;
-        const refLabel = t.kind === 'heroes' || t.kind === 'neutrals'
+        const refLabel = k === 'heroes' || k === 'neutrals'
           ? (ref.name_en || ref.name || ref.key)
           : picker.displayName(ref);
         preview.appendChild(h('span.fi', {
           title: refLabel,
           style: { width: '40px', height: '40px', display: 'inline-block' },
-        }, t.kind === 'heroes'
+        }, k === 'heroes'
           ? h('img', { src: store.heroIcon(ref), alt: '', style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } })
           : ui.dotaIcon(store.icon(ref.img), null, true)));
       }

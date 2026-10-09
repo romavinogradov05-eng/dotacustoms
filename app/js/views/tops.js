@@ -27,6 +27,11 @@
     return picker.displayName(ref);
   }
 
+  /** Вид ссылки для picker.showCard: hero / neutral / ability. */
+  function refType(kind) {
+    return kind === 'heroes' ? 'hero' : kind === 'neutrals' ? 'neutral' : 'ability';
+  }
+
   /* ══════════════════════════════════════════════════════════════════
      Список
      ══════════════════════════════════════════════════════════════════ */
@@ -219,15 +224,15 @@
         if (!row.items.length) continue;
         const strip = h('div.tl-strip.view');
         for (const e of row.items) {
-          const ref = refEntry(top.kind, e.ref_id);
+          const ekind = e.kind || top.kind;
+          const ref = refEntry(ekind, e.ref_id);
           const c = h('div.tl-card.view', {
-            title: (ref ? tierboard.labelOf(top.kind, ref) : '—') + (e.note ? ' — ' + e.note : ''),
+            title: (ref ? tierboard.labelOf(ekind, ref) : '—') + (e.note ? ' — ' + e.note : ''),
           }, [
-            tierboard.tileIcon(top.kind, ref),
+            tierboard.tileIcon(ekind, ref),
             e.note ? h('span.tl-note', { text: e.note }) : null,
           ]);
-          c.addEventListener('click', () => ref && picker.showCard(ref,
-            top.kind === 'heroes' ? 'hero' : top.kind === 'neutrals' ? 'neutral' : 'ability'));
+          c.addEventListener('click', () => ref && picker.showCard(ref, refType(ekind)));
           strip.appendChild(c);
         }
         const label = row.tier || '—';
@@ -303,7 +308,7 @@
   function entryRow(kind, ref, entry) {
     return h('div.entry-row', {
       title: ref ? refName(kind, ref) : '',
-      onclick: () => ref && picker.showCard(ref, kind === 'heroes' ? 'hero' : kind === 'neutrals' ? 'neutral' : 'ability'),
+      onclick: () => ref && picker.showCard(ref, refType(kind)),
     }, [
       h('span.rank', { text: '#' + entry.rank }),
       refIcon(kind, ref),
@@ -365,7 +370,9 @@
         id: t.id, mode: t.mode, kind: t.kind, title: t.title,
         description: t.description || '', patch: t.patch || '', is_draft: !!t.is_draft,
         tiers: t.tiers && t.tiers.length ? t.tiers.slice() : defaultTiers(),
-        entries: (t.entries || []).map(e => ({ ref_id: e.ref_id, rank: e.rank, tier: e.tier || '', note: e.note || '' })),
+        entries: (t.entries || []).map(e => ({
+          ref_id: e.ref_id, kind: e.kind || t.kind, rank: e.rank, tier: e.tier || '', note: e.note || '',
+        })),
       };
     }
 
@@ -395,14 +402,9 @@
       for (const k of store.config.top_kinds) {
         kindTabs.appendChild(h(`button.tab${model.kind === k.key ? '.active' : ''}`, {
           type: 'button', text: `${k.icon} ${k.title}`,
-          onclick: () => {
-            if (model.kind !== k.key && model.entries.length) {
-              ui.confirm({ title: 'Сменить вид?', text: 'Список позиций будет очищен, потому что сравнивать героев с предметами нельзя.', okLabel: 'Сменить' })
-                .then(yes => { if (!yes) return; model.kind = k.key; model.entries = []; drawTabs(); drawEntries(); });
-              return;
-            }
-            model.kind = k.key; drawTabs(); drawEntries();
-          },
+          // Вид топа — это только категория, под которой топ виден в списке.
+          // Позиции теперь можно смешивать, поэтому смена вида ничего не чистит.
+          onclick: () => { model.kind = k.key; drawTabs(); },
         }));
       }
     }
@@ -431,15 +433,15 @@
       // класть позиции. Сама подсказка «перетащи сюда» стоит внутри.
       if (!model.entries.length) {
         entriesHost.appendChild(h('div.field-hint', {
-          text: 'Позиций пока нет. Нажми «＋ Добавить позиции» — и карточки '
-            + 'можно будет раскладывать по строкам.',
+          text: 'Позиций пока нет. Нажми «＋ Герой», «＋ Нейтралка» или '
+            + '«＋ Способность» — карточки можно будет раскладывать по строкам.',
         }));
       }
       {
         entriesHost.appendChild(tierboard.render(model.kind, model.entries, {
           refEntry,
           tiers: model.tiers,
-          onAddTier: tier => addEntry(tier),
+          onAddTier: tier => chooseKindThen(kind => addEntry(tier, kind)),
           onRemove: refId => {
             const i = model.entries.findIndex(e => e.ref_id === refId);
             if (i >= 0) { model.entries.splice(i, 1); drawEntries(); }
@@ -457,7 +459,12 @@
 
       // Панель управления под доской: добавление, автотир, подсказки
       entriesHost.appendChild(h('div.btn-row', { style: { marginTop: '14px' } }, [
-        h('button.btn', { type: 'button', text: '＋ Добавить позиции', onclick: addEntry }),
+        h('button.btn', { type: 'button', text: '＋ Герой', title: 'Добавить персонажа',
+          onclick: () => addEntry(undefined, 'heroes') }),
+        h('button.btn', { type: 'button', text: '＋ Нейтралка', title: 'Добавить нейтральный предмет',
+          onclick: () => addEntry(undefined, 'neutrals') }),
+        h('button.btn', { type: 'button', text: '＋ Способность', title: 'Добавить скилл',
+          onclick: () => addEntry(undefined, 'skills') }),
         h('button.btn.btn-ghost', {
           type: 'button', text: '⚡ Разложить по тирам', title: 'Раздать поровну по строкам сверху вниз',
           onclick: () => {
@@ -489,27 +496,46 @@
       statsHost.style.color = st.total >= need ? '' : 'var(--red)';
     }
 
-    function addEntry(tier) {
+    /** Добавляет позицию выбранного вида в выбранный тир (tier = '' — без тира). */
+    function addEntry(tier, kind) {
+      const k = kind || model.kind;
       const picked = model.entries.map(e => e.ref_id);
       const opts = {
         picked,
         onPick: ref => {
           if (model.entries.length >= 200) { ui.err('Максимум 200 позиций'); return; }
-          model.entries.push({ ref_id: ref.id, rank: model.entries.length + 1, tier: tier || '', note: '' });
+          model.entries.push({
+            ref_id: ref.id, kind: k, rank: model.entries.length + 1, tier: tier || '', note: '',
+          });
           tierboard.renumber(model.entries);
           drawEntries();
         },
       };
-      if (model.kind === 'heroes') picker.pickHero({ ...opts, mode: model.mode });
-      else if (model.kind === 'neutrals') picker.pickNeutral(opts);
+      if (k === 'heroes') picker.pickHero({ ...opts, mode: model.mode });
+      else if (k === 'neutrals') picker.pickNeutral(opts);
       else picker.pickAbility(opts);
+    }
+
+    /**
+     * Спрашивает, что добавить в тир, и зовёт cb(kind).
+     * Топ смешанный, поэтому клик по метке тира не знает, какой вид выбрать.
+     */
+    function chooseKindThen(cb) {
+      const kinds = store.config.top_kinds || [];
+      const body = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+        kinds.map(k => h('button.btn', {
+          type: 'button', text: `${k.icon || ''} ${k.title}`.trim(),
+          onclick: () => { m.close(); cb(k.key); },
+        })));
+      const m = ui.modal({ title: 'Что добавить?', body });
     }
     drawEntries();
 
     main.appendChild(h('div.panel', [
       h('div.panel-title', [h('span', { text: 'Что за топ' })]),
       h('div.field', [h('label', { text: 'Режим' }), modeTabs]),
-      h('div.field', [h('label', { text: 'Вид топа' }), kindTabs]),
+      h('div.field', [h('label', { text: 'Основная категория' }), kindTabs,
+        h('div.field-hint', { text: 'Под ней топ виден в списке. Внутри топ можно смешивать: добавляй и героев, и нейтралок, и способности.' })]),
       h('div.field', [h('label', { text: 'Название' }), titleInput]),
       h('div.field', [h('label', { text: 'Описание' }), descArea]),
     ]));
@@ -523,9 +549,10 @@
       h('div.help-note', {
         text: 'Слева — тир, справа — позиции. Тащи карточку в нужную строку; '
           + 'внутри строки порядок тоже меняется перетаскиванием. '
+          + 'В одном топе можно смешивать героев, нейтралок и способности — '
+          + 'для этого кнопки «＋ Герой», «＋ Нейтралка» и «＋ Способность». '
           + 'Набор тиров и их названия настраиваются в панели «Тиры» справа. '
-          + 'Кнопки «＋ Добавить» — заполнить список, «Разложить по тирам» — '
-          + 'раздать поровну, остальное руками.',
+          + '«Разложить по тирам» раздаёт поровну, остальное руками.',
       }),
       entriesHost,
       statsHost,

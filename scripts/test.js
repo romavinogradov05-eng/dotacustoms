@@ -446,6 +446,9 @@ async function main() {
   const topOne = await api('GET', `/api/tops/${topId}`);
   ok('топ отдаёт позиции по порядку', topOne.data?.top?.entries?.[0]?.ref_id === heroRefs[0]);
   ok('у позиции есть тир', topOne.data?.top?.entries?.[0]?.tier === 'S');
+  ok('вид позиции по умолчанию — вид топа',
+    (topOne.data?.top?.entries || []).every(e => e.kind === 'heroes'),
+    JSON.stringify((topOne.data?.top?.entries || []).map(e => e.kind)));
 
   const topList = await api('GET', '/api/tops?mode=chc&kind=heroes');
   ok('фильтр по виду топа работает', (topList.data?.items || []).every(t => t.kind === 'heroes'));
@@ -966,6 +969,35 @@ async function main() {
   }
   ok('категории топов (герои/скиллы/нейтралки) создаются и фильтруются',
     kindsOk.every(Boolean), kindNotes.join(', '));
+
+  // Смешивание видов в одном топе: герой + нейтралка + способность.
+  // ref_id берём заведомо разные — внутри топа id уникальны независимо от вида.
+  const mixedUsed = new Set();
+  const mixedHero = heroRefs.find(id => !mixedUsed.has(id));
+  mixedUsed.add(mixedHero);
+  const mixedNeutral = dataset.data.neutrals.map(n => n.id).find(id => !mixedUsed.has(id));
+  mixedUsed.add(mixedNeutral);
+  const mixedAbility = dataset.data.abilities.filter(a => a.playable && a.hero).map(a => a.id)
+    .find(id => !mixedUsed.has(id));
+  const mixed = await api('POST', '/api/tops', {
+    token: adminToken,
+    body: {
+      mode: 'chc', kind: 'heroes', title: 'Смешанный топ',
+      entries: [
+        { ref_id: mixedHero, kind: 'heroes', rank: 1, tier: 'S' },
+        { ref_id: mixedNeutral, kind: 'neutrals', rank: 2, tier: 'A' },
+        { ref_id: mixedAbility, kind: 'skills', rank: 3, tier: '' },
+      ],
+    },
+  });
+  ok('смешанный топ создан', mixed.status === 201, JSON.stringify(mixed.data));
+  const mixedGet = await api('GET', `/api/tops/${mixed.data?.id}`, { token: adminToken });
+  const gotKinds = (mixedGet.data?.top?.entries || []).map(e => e.kind);
+  ok('виды позиций в одном топе сохраняются',
+    JSON.stringify(gotKinds) === JSON.stringify(['heroes', 'neutrals', 'skills']),
+    JSON.stringify(gotKinds));
+  ok('смешанный топ остаётся в своей категории',
+    mixedGet.data?.top?.kind === 'heroes', mixedGet.data?.top?.kind);
 
   /* ══ уведомления (ячейка в шапке) ════════════════════════════════ */
   console.log('\nУведомления');

@@ -125,14 +125,17 @@
   }
 
   function card(kind, entry, opts) {
-    const ref = opts.refEntry(kind, entry.ref_id);
+    // Вид позиции может отличаться от вида топа: в одном топе допустимо
+    // смешивать героев, нейтралок и способности.
+    const k = entry.kind || kind;
+    const ref = opts.refEntry(k, entry.ref_id);
     const node = h('div.tl-card', {
       draggable: 'true',
       tabindex: '0',
       'data-ref': String(entry.ref_id),
-      title: (ref ? labelOf(kind, ref) : 'не найден') + (entry.note ? ' — ' + entry.note : ''),
+      title: (ref ? labelOf(k, ref) : 'не найден') + (entry.note ? ' — ' + entry.note : ''),
     }, [
-      tileIcon(kind, ref),
+      tileIcon(k, ref),
       // Перетаскивание не единственный способ: на тач-экране и с
       // клавиатуры сдвиг одной кнопкой привычнее.
       h('div.tl-ctl', [

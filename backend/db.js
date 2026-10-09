@@ -145,6 +145,7 @@ create table if not exists meta_top_entries (
   top_id  integer not null references meta_tops(id) on delete cascade,
   rank    integer not null default 0,         -- 1 = лучший
   ref_id  integer not null,                    -- id героя / нейтралки / способности
+  kind    text not null default '',            -- heroes | neutrals | skills; '' = вид топа
   tier    text not null default '',            -- метка тира (S | A | … | кастомная)
   note    text not null default ''
 );
@@ -380,6 +381,18 @@ const MIGRATIONS = [
     name: '2026-10-08-top-tiers',
     steps: [
       'alter table meta_tops add column tiers text',
+    ],
+  },
+  {
+    // v1.4 — смешивание видов в одном топе: у позиции храним её вид,
+    // иначе id героев и нейтралок/способностей не отличить (они пересекаются).
+    name: '2026-10-09-top-entry-kind',
+    steps: [
+      "alter table meta_top_entries add column kind text not null default ''",
+      // Старые позиции наследуют вид своего топа.
+      `update meta_top_entries set kind = (
+         select kind from meta_tops where meta_tops.id = meta_top_entries.top_id
+       ) where kind = ''`,
     ],
   },
 ];
