@@ -143,8 +143,8 @@ async function main() {
   ok('новый id Kast стабилен, а не индексный',
     cItems.find(c => c.key === 'kast_greatstaff_of_the_magna')?.id !== 900000);
   // иконки лежат на диске — локальный офлайн-режим
-  const iconDir = path.join(__dirname, '..', 'app', 'images', 'custom');
-  const noIcon = cItems.filter(c => c.img && !fs.existsSync(path.join(iconDir, c.img.replace(/^custom\//, ''))));
+  const imageDir = path.join(__dirname, '..', 'app', 'images');
+  const noIcon = cItems.filter(c => c.img && !fs.existsSync(path.join(imageDir, c.img)));
   ok('иконки всех предметов на диске', !noIcon.length, noIcon.map(c => c.key).join(', '));
   ok('цепочки апгрейдов замкнуты', cItems.every(c => {
     if (c.upgrades_from) {

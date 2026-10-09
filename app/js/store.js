@@ -34,6 +34,7 @@
     customItems: [],
     customGroups: [],
     customSource: null,
+    customRrSource: null,
     customPatch: null,
     customModes: null,
     customIdAliases: {},
@@ -301,6 +302,7 @@
     store.customItems = d.custom_items || [];
     store.customGroups = d.custom_groups || [];
     store.customSource = d.custom_source || null;
+    store.customRrSource = d.custom_rr_source || null;
     store.customModes = d.custom_modes || null;
     store.customPatch = (d.meta && d.meta.custom_patch) || null;
     // старое (индексное) id → ключ: билды, созданные до перехода на

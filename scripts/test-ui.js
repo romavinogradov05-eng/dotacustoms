@@ -21,6 +21,12 @@ const vm = require('node:vm');
 
 const APP = path.join(__dirname, '..', 'app');
 
+// Ожидаемое число кастомных предметов берём из самого датасета, а не
+// хардкодим: каталог пополняется (CHC — вручную, Ratten Run — из VPK).
+const DATASET = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'dota.json'), 'utf8'));
+const CUSTOM_TOTAL = (DATASET.custom_items || []).length;
+const CUSTOM_GROUPS = (DATASET.custom_groups || []).length;
+
 /* backend поднимаем сами: тест должен быть герметичным */
 let ORIGIN = '';
 let API = '';
@@ -545,13 +551,13 @@ async function main() {
   });
 
   say('');
-  say('Кастомные предметы CHC');
+  say('Кастомные предметы CHC и Ratten Run');
   await check('каталог загрузился в store', async () => {
     const items = sandbox.store.customItems || [];
-    assert(items.length === 31, `предметов ${items.length}, ожидалось 31`);
+    assert(items.length === CUSTOM_TOTAL, `предметов ${items.length}, ожидалось ${CUSTOM_TOTAL}`);
     assert(sandbox.store.customPatch === null,
       'патч гайд не называет, ждём null: ' + sandbox.store.customPatch);
-    assert((sandbox.store.customGroups || []).length === 4, 'групп не 4');
+    assert((sandbox.store.customGroups || []).length === CUSTOM_GROUPS, 'групп не ' + CUSTOM_GROUPS);
     assert((sandbox.store.customGroups || []).some(g => g.key === 'books'),
       'группы «Книги» нет');
     assert(items.every(c => ['chc', 'rr', '*'].includes(c.mode)),
@@ -655,16 +661,21 @@ async function main() {
     return '19 алиасов, Kast и Torture Pipe находят по старым номерам';
   });
 
-  await check('режимы: RR не имеет своего магазина, все предметы общие', async () => {
+  await check('режимы: предметы RR доступны только в RR, общие — везде', async () => {
+    const expected = m => (DATASET.custom_items || [])
+      .filter(i => (i.mode || '*') === '*' || i.mode === m).length;
     for (const mode of ['chc', 'rr']) {
       const list = sandbox.store.customItemsFor(mode);
-      assert(list.length === 31,
-        mode + ': доступно ' + list.length + ' предметов, ожидалось 31');
+      assert(list.length === expected(mode),
+        mode + ': доступно ' + list.length + ', ожидалось ' + expected(mode));
       assert(list.every(i => sandbox.store.itemInMode(i, mode)),
         mode + ': фильтр пропустил чужой предмет');
     }
     assert(!sandbox.store.itemInMode(null, 'chc'), 'пустой предмет считается доступным');
-    return '31 предметов в CHC и 31 в RR';
+    const chc = sandbox.store.customItemsFor('chc').length;
+    const rr = sandbox.store.customItemsFor('rr').length;
+    assert(rr > chc, 'RR должен получать свои предметы сверх общих');
+    return `CHC ${chc}, RR ${rr}`;
   });
 
   await check('экран справочника открывается', async () => {
@@ -673,7 +684,7 @@ async function main() {
     assert(text.includes('Кастомные предметы'), 'нет заголовка');
     assert(text.includes('Книги'), 'нет группы «Книги»');
     assert(text.includes('Kast'), 'предмет из гайда не выведен');
-    assert(host.querySelectorAll('.custom-card').length === 31,
+    assert(host.querySelectorAll('.custom-card').length === CUSTOM_TOTAL,
       'карточек: ' + host.querySelectorAll('.custom-card').length);
     return `${host.querySelectorAll('.custom-card').length} карточек, ${host.innerHTML.length} симв.`;
   });
@@ -1568,7 +1579,7 @@ async function main() {
   const GUEST = [
     ['главная', '/', h => assert(countTags(h, 'h2') + countTags(h, 'h1') > 0, 'нет заголовка')],
     ['справочник кастомных предметов', '/custom-items', h => {
-      assert(h.querySelectorAll('.custom-card').length === 31, 'карточек не 31');
+      assert(h.querySelectorAll('.custom-card').length === CUSTOM_TOTAL, 'карточек не ' + CUSTOM_TOTAL);
     }],
     ['билды', '/builds', h => assert(h.innerHTML.length > 200, 'почти пусто')],
     ['топы', '/tops', h => assert(h.innerHTML.length > 200, 'почти пусто')],

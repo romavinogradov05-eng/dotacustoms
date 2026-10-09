@@ -138,7 +138,7 @@ npm run start:web      # http://127.0.0.1:5173, F12 работает
 | `npm test` | Четыре прогона: API, сессия между перезапусками, статическая проверка renderer-а, дымовой тест экранов |
 | `npm run test:api` | Только backend-тесты (227 проверок) |
 | `npm run test:session` | Токен переживает перезапуск сервера (13 проверок) |
-| `npm run test:ui` | Дымовой тест интерфейса (108 проверок) |
+| `npm run test:ui` | Дымовой тест интерфейса (117 проверок) |
 | `npm run test:save` | Живой интерфейс + чтение файла базы: сохранение, модерация, ростер, перезапуск (31 проверка) |
 | `npm run test:dist` | Собранный .exe: регистрация, модерация, перезапуск, сеть (28 проверок) |
 | `npm run check:renderer` | Ищет обращения к несуществующим функциям |
@@ -151,6 +151,8 @@ npm run start:web      # http://127.0.0.1:5173, F12 работает
 | `npm run data:build` | Пересобрать `data/dota.json` |
 | `npm run data:images` | Скачать иконки предметов (обычных и кастомных) для работы офлайн |
 | `npm run data:images:custom` | Только иконки кастомных предметов CHC |
+| `npm run data:rr` | Пересобрать каталог предметов Ratten Run из VPK-аддона |
+| `npm run data:rr:icons` | Извлечь иконки Ratten Run из VPK в `app/images/custom/` |
 | `npm run icon` | Нарисовать иконку приложения (`app/icon.png`, `build/icon.ico`) |
 | `npm run dist` | Собрать portable `.exe` |
 
@@ -535,6 +537,23 @@ scripts/fetch-custom-images.js тянет иконки с серверов Steam
 scripts/build-dataset.js       раздаёт каталог в data/dota.json
 app/js/views/custom-items.js   экран справочника
 ```
+
+Дополняет ручной справочник автоматический каталог **Ratten Run** —
+`data/custom/rr-items.json` (**18 предметов**: призыв существ, Refresher Orb 2,
+Primal Essence, Book of The Dead и др.). Он собран из игровых скриптов и русской
+локализации VPK-аддона и только **добавляет** то, чего нет в `chc-items.json`:
+дубликаты отсекаются по таблице соответствий, поэтому ключи ручного каталога
+(и сохранённые билды) не меняются. RR-предметам проставлен `mode: 'rr'`.
+
+```
+scripts/kv.js, vpk.js, vtex.js  разбор KV-скриптов, VPK-архива и текстур Valve
+scripts/build-rr-catalog.js     собирает data/custom/rr-items.json
+scripts/extract-rr-icons.js     извлекает иконки из VPK в app/images/custom/
+```
+
+Иконки RR лежат локально, в `app/images/custom/`; поле `img` каждого предмета
+указывает на файл (имя текстуры Valve, а не ключ предмета), поэтому иконку можно
+найти, даже если название в аддоне не совпадает с нашей подписью.
 
 Каждому предмету синтетический id из диапазона **900000+** — он не может
 пересечься с настоящими (максимум Valve около 35 000). Поэтому в редакторе

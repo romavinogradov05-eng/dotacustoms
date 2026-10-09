@@ -12,6 +12,8 @@
     "data:fetch": "node scripts/fetch-dota-data.js",
     "data:build": "node scripts/build-dataset.js",
     "data:custom": "node scripts/build-custom-items.js",
+    "data:rr": "node scripts/build-rr-catalog.js",
+    "data:rr:icons": "node scripts/extract-rr-icons.js",
     "data:images": "node scripts/fetch-images.js && node scripts/fetch-custom-images.js",
     "data:images:custom": "node scripts/fetch-custom-images.js",
     "icon": "node scripts/make-icon.js",

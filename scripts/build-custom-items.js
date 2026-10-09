@@ -24,6 +24,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const FILE = path.join(__dirname, '..', 'data', 'custom', 'chc-items.json');
+// Второй источник — предметы Ratten Run, собранные из VPK-аддона
+// (scripts/build-rr-catalog.js). Проверяем оба вместе: id и группы
+// считаются по объединённому списку, иначе валидатор ругался бы зря.
+const RR_FILE = path.join(__dirname, '..', 'data', 'custom', 'rr-items.json');
 const CUSTOM_ID_BASE = 900000;
 
 const customId = key => {
@@ -41,8 +45,9 @@ function main() {
     process.exit(1);
   }
   const cat = JSON.parse(fs.readFileSync(FILE, 'utf8'));
-  const items = cat.items || [];
-  const groups = (cat.groups || []).map(g => g.key);
+  const rr = fs.existsSync(RR_FILE) ? JSON.parse(fs.readFileSync(RR_FILE, 'utf8')) : { items: [], groups: [] };
+  const items = [...(cat.items || []), ...(rr.items || [])];
+  const groups = [...(cat.groups || []), ...(rr.groups || [])].map(g => g.key);
   const problems = [];
 
   if (!items.length) problems.push('каталог пуст');

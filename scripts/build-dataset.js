@@ -212,6 +212,16 @@ function main() {
      не пересечься с настоящими (максимум Valve — около 35 000). */
   const custom = readOptional('../custom/chc-items.json') || { items: [], groups: [] };
 
+  /* Каталог Ratten Run собран из VPK-аддона скриптом build-rr-catalog.js:
+     там уже отфильтрованы рецепты и предметы, которые есть в ручном
+     справочнике или в обычной Доте. Здесь только докладываем остаток. */
+  const rrCustom = readOptional('../custom/rr-items.json') || { items: [], groups: [] };
+  const customGroups = [...(custom.groups || [])];
+  for (const g of rrCustom.groups || []) {
+    if (!customGroups.some(x => x.key === g.key)) customGroups.push(g);
+  }
+  const customList = [...(custom.items || []), ...(rrCustom.items || [])];
+
   /* id кастомных предметов — из диапазона 9xxxxx, чтобы никогда не
      пересечься с настоящими (максимум Valve — около 35 000).
 
@@ -237,7 +247,7 @@ function main() {
   const hasIcon = key => fs.existsSync(path.join(ICON_DIR, `${key}.png`));
 
   const customIdAliases = {};
-  const customItems = (custom.items || []).map(c => {
+  const customItems = customList.map(c => {
     const id = customId(c.key);
     if (customIdAliases[id]) {
       throw new Error(`[custom] коллизия id ${id}: ${customIdAliases[id]} и ${c.key}`);
@@ -271,8 +281,9 @@ function main() {
       related_items: c.related_items || [],
       related_abilities: c.related_abilities || [],
       // иконки нет не у всех: без неё в пикере будет заглушка,
-      // а не битая картинка
-      img: hasIcon(c.key) ? `custom/${c.key}.png` : '',
+      // а не битая картинка. У предметов RR путь известен заранее
+      // (иконка из VPK извлечена отдельно) и приходит в поле img.
+      img: c.img || (hasIcon(c.key) ? `custom/${c.key}.png` : ''),
     };
   });
 
@@ -358,8 +369,9 @@ function main() {
     abilities: outAbilities,
     rosters: rostersOut,
     custom_items: customItems,
-    custom_groups: custom.groups || [],
+    custom_groups: customGroups,
     custom_source: custom.source || null,
+    custom_rr_source: rrCustom.source || null,
     custom_modes: custom.modes || null,
     // старое (индексное) id → ключ, чтобы билды, созданные до перехода
     // на ключевые id, продолжили показывать правильный предмет
