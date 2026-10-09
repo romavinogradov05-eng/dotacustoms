@@ -230,9 +230,11 @@
             top.kind === 'heroes' ? 'hero' : top.kind === 'neutrals' ? 'neutral' : 'ability'));
           strip.appendChild(c);
         }
+        const label = row.tier || '—';
         board.appendChild(h('div.tl-row', [
-          h('div.tl-label.tier-' + common.tierColorClass(row.tier, top.tiers), {
-            text: row.tier || '—',
+          h('div.tl-label' + (label.length >= 6 ? '.long' : label.length >= 3 ? '.mid' : '')
+            + '.tier-' + common.tierColorClass(row.tier, top.tiers), {
+            text: label,
           }),
           strip,
         ]));

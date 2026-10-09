@@ -171,6 +171,7 @@
     const tierList = opts.tiers;
 
     for (const row of rowsOf(entries, tierList)) {
+      const label = labelFor(row.tier);
       const strip = h('div.tl-strip', {
         'data-tier': row.tier,
         ondragover: ev => {
@@ -240,9 +241,9 @@
       }
 
       board.appendChild(h('div.tl-row', [
-        h(`div.tl-label${opts.onAddTier ? '.add' : ''}`, {
-          text: labelFor(row.tier),
-          title: opts.onAddTier ? ('Добавить позицию в тир ' + labelFor(row.tier)) : null,
+        h(`div.tl-label${label.length >= 6 ? '.long' : label.length >= 3 ? '.mid' : ''}${opts.onAddTier ? '.add' : ''}`, {
+          text: label,
+          title: opts.onAddTier ? ('Добавить позицию в тир ' + label) : null,
           onclick: opts.onAddTier ? () => opts.onAddTier(row.tier) : null,
         }),
         strip,
